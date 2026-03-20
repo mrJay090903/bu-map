@@ -1,0 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Sora:wght@500;700&display=swap');
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.leaflet-container {
+  font-family: 'Manrope', sans-serif;
+  background: #dbeafe;
+  transition: transform 220ms linear;
+}
+
+.leaflet-container.sim-nav-mode {
+  transform: scale(1.08) rotate(var(--map-rotation, 0deg));
+  transform-origin: 50% 50%;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #334155 !important;
+  border-radius: 8px;
+  margin: 0 8px 8px 0 !important;
+  padding: 4px 8px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #1d4ed8 !important;
+}
+
+.route-panel-scroll {
+  scrollbar-width: thin;
+}
+
+@keyframes overlay-slide {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes step-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.overlay-enter {
+  animation: overlay-slide 380ms ease-out both;
+}
+
+.step-reveal {
+  animation: step-fade 300ms ease-out both;
+}
