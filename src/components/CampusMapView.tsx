@@ -8,7 +8,7 @@ import {
   Tooltip,
   useMap,
 } from "react-leaflet";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type {
   Destination,
   EntryMode,
@@ -110,6 +110,54 @@ function SimulationFollowController({
   return null;
 }
 
+function RouteAnimationController({ enabled }: { enabled: boolean }) {
+  const map = useMap();
+  const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const container = map.getContainer();
+    const animatedPathSelector = "path.route-line-animated";
+    const start = performance.now();
+
+    const animate = (timestamp: number) => {
+      const elapsed = timestamp - start;
+      const dashOffset = -((elapsed / 22) % 64);
+      const breathe = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(elapsed / 350));
+
+      container
+        .querySelectorAll<SVGPathElement>(animatedPathSelector)
+        .forEach((path) => {
+          path.style.strokeDashoffset = dashOffset.toFixed(2);
+          path.style.strokeOpacity = breathe.toFixed(3);
+        });
+
+      frameRef.current = window.requestAnimationFrame(animate);
+    };
+
+    frameRef.current = window.requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current !== null) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      container
+        .querySelectorAll<SVGPathElement>(animatedPathSelector)
+        .forEach((path) => {
+          path.style.removeProperty("stroke-dashoffset");
+          path.style.removeProperty("stroke-opacity");
+        });
+    };
+  }, [enabled, map]);
+
+  return null;
+}
+
 export function CampusMapView({
   mapCenter,
   focusRequest,
@@ -147,6 +195,7 @@ export function CampusMapView({
         heading={effectiveHeading}
         rotateWithHeading={gyroEnabled}
       />
+      <RouteAnimationController enabled={Boolean(route)} />
 
       <CircleMarker
         center={[startPoint.lat, startPoint.lon]}
