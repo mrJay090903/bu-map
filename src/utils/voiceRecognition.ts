@@ -30,6 +30,10 @@ export type VoiceRecognitionInstance = {
 export type VoiceRecognitionConstructor = new () => VoiceRecognitionInstance;
 
 const HF_API_KEY = (import.meta.env.VITE_HF_API_KEY ?? "").trim();
+const FASTAPI_TRANSCRIBE_URL = (
+  import.meta.env.VITE_FASTAPI_TRANSCRIBE_URL ??
+  "https://veccode-wish.hf.space/transcribe"
+).trim();
 
 export function isHFTranscriptionConfigured(): boolean {
   return HF_API_KEY.length > 0;
@@ -87,8 +91,11 @@ export async function transcribeAudioWithFastAPI(
   const formData = new FormData();
   formData.append("file", audioBlob, "audio.webm");
 
-  console.log("[FastAPI] Sending audio to transcription endpoint...");
-  const response = await fetch("https://veccode-wish.hf.space/transcribe", {
+  console.log(
+    "[FastAPI] Sending audio to transcription endpoint:",
+    FASTAPI_TRANSCRIBE_URL,
+  );
+  const response = await fetch(FASTAPI_TRANSCRIBE_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${HF_API_KEY}`,
@@ -98,9 +105,13 @@ export async function transcribeAudioWithFastAPI(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("[FastAPI] Transcription failed with status:", response.status, errorText);
+    console.error(
+      "[FastAPI] Transcription failed with status:",
+      response.status,
+      errorText,
+    );
     throw new Error(
-      `FastAPI transcription failed: ${response.status} ${response.statusText}`,
+      `FastAPI transcription failed: ${response.status} ${response.statusText} (${FASTAPI_TRANSCRIBE_URL})`,
     );
   }
 

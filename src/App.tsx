@@ -290,8 +290,28 @@ function App() {
           "[Voice] Sending audio to FastAPI endpoint for transcription...",
         );
         setVoiceFeedback("Transcribing your voice...");
-        transcript = await transcribeAudioWithFastAPI(audioBlob);
-        console.log("[Voice] Transcription received from FastAPI:", transcript);
+        try {
+          transcript = await transcribeAudioWithFastAPI(audioBlob);
+          console.log("[Voice] Transcription received from FastAPI:", transcript);
+        } catch (fastApiError) {
+          console.warn(
+            "[Voice] FastAPI transcription failed, attempting browser fallback:",
+            fastApiError,
+          );
+
+          if (!isBrowserSpeechRecognitionSupported()) {
+            throw fastApiError;
+          }
+
+          setVoiceFeedback("FastAPI unavailable. Switching to browser speech...");
+          transcript = await transcribeWithBrowserSpeechRecognition({
+            signal: controller.signal,
+          });
+          console.log(
+            "[Voice] Transcription received from browser fallback:",
+            transcript,
+          );
+        }
       } else {
         console.log(
           "[Voice] HF key unavailable; using browser speech recognition fallback.",
