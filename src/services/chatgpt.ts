@@ -1,0 +1,288 @@
+import type { PresetDestination } from "../types/navigation";
+import type { ConversationMessage } from "../types/conversation";
+
+const OPENAI_API_KEY = (import.meta.env.VITE_OPENAI_API_KEY ?? "").trim();
+const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
+
+export function isOpenAIConfigured(): boolean {
+  return OPENAI_API_KEY.length > 0;
+}
+
+export type ChatGPTResponse = {
+  destination: string | null;
+  message: string;
+  confidence: "high" | "medium" | "low";
+};
+
+/**
+ * Send voice command to ChatGPT for intelligent processing
+ * ChatGPT will understand the user's intent and match it to preset destinations
+ */
+export async function processVoiceCommandWithChatGPT(
+  voiceCommand: string,
+  availableDestinations: PresetDestination[],
+): Promise<ChatGPTResponse> {
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local",
+    );
+  }
+
+  // Build a list of available destinations for ChatGPT context
+  const destinationList = availableDestinations
+    .map((dest) => {
+      const keywords = dest.keywords.join(", ");
+      return `- ${dest.label} (keywords: ${keywords})`;
+    })
+    .join("\n");
+
+  const systemPrompt = `You are an AI navigation assistant for Bicol University campus. Your role is to help users navigate to campus locations.
+
+Available destinations:
+${destinationList}
+
+When a user provides a voice command:
+1. Determine if they want to go to a specific location
+2. Match their request to one of the available destinations
+3. If the match is clear, respond with the exact destination label
+4. If unclear, ask for clarification or provide helpful suggestions
+
+Your response MUST be a JSON object with this exact structure:
+{
+  "destination": "exact destination label or null",
+  "message": "helpful message to the user",
+  "confidence": "high" | "medium" | "low"
+}
+
+Examples:
+- User: "take me to the gym" → {"destination": "Gym B", "message": "Navigating to Gym B", "confidence": "high"}
+- User: "I need to go to class" → {"destination": null, "message": "Which building is your class in? We have College of Education, College of Science, and other buildings.", "confidence": "low"}
+- User: "where is the library" → {"destination": "Main Library", "message": "Found the Main Library. Starting navigation.", "confidence": "high"}`;
+
+  const userMessage = `User voice command: "${voiceCommand}"`;
+
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMessage },
+        ],
+        temperature: 0.3,
+        max_tokens: 200,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "[ChatGPT] API request failed:",
+        response.status,
+        errorText,
+      );
+      throw new Error(
+        `ChatGPT API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("ChatGPT returned empty response");
+    }
+
+    const parsedResponse = JSON.parse(content) as ChatGPTResponse;
+    console.log("[ChatGPT] Response:", parsedResponse);
+
+    return parsedResponse;
+  } catch (error) {
+    console.error("[ChatGPT] Error processing voice command:", error);
+    throw error;
+  }
+}
+
+/**
+ * Chat with AI in a conversational manner about campus navigation
+ * Maintains conversation history and can trigger navigation actions
+ */
+export async function chatWithAI(
+  userMessage: string,
+  conversationHistory: ConversationMessage[],
+  context: {
+    currentLocation?: string;
+    destination?: string;
+    availableDestinations: PresetDestination[];
+    isNavigating: boolean;
+  },
+): Promise<{ message: string; action?: { type: "navigate"; destination: string } }> {
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local",
+    );
+  }
+
+  const destinationList = context.availableDestinations
+    .map((dest) => {
+      const keywords = dest.keywords.join(", ");
+      return `- ${dest.label} (keywords: ${keywords})`;
+    })
+    .join("\n");
+
+  const systemPrompt = `You are a helpful AI assistant for Bicol University campus navigation. You help students and visitors navigate the campus and answer questions about campus locations.
+
+Available campus locations:
+${destinationList}
+
+${context.currentLocation ? `Current location: ${context.currentLocation}` : ""}
+${context.destination ? `Current destination: ${context.destination}` : ""}
+${context.isNavigating ? "User is currently navigating to a destination." : ""}
+
+You can:
+1. Answer questions about campus locations and facilities
+2. Provide directions to buildings
+3. Give information about what's available on campus
+4. Have casual conversation about campus life
+
+When a user wants to navigate somewhere, respond with JSON that includes an action:
+{"message": "I'll navigate you to [destination]", "action": {"type": "navigate", "destination": "exact destination label"}}
+
+For general questions, just respond normally with:
+{"message": "your helpful response"}
+
+Be friendly, helpful, and conversational. Keep responses concise but informative.`;
+
+  // Convert conversation history to OpenAI format
+  const messages = [
+    { role: "system" as const, content: systemPrompt },
+    ...conversationHistory.map((msg) => ({
+      role: msg.role === "user" ? ("user" as const) : ("assistant" as const),
+      content: msg.content,
+    })),
+    { role: "user" as const, content: userMessage },
+  ];
+
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 300,
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        "[ChatGPT] Conversation API request failed:",
+        response.status,
+        errorText,
+      );
+      throw new Error(
+        `ChatGPT API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error("ChatGPT returned empty response");
+    }
+
+    const parsedResponse = JSON.parse(content) as {
+      message: string;
+      action?: { type: "navigate"; destination: string };
+    };
+
+    console.log("[ChatGPT] Conversation response:", parsedResponse);
+
+    return parsedResponse;
+  } catch (error) {
+    console.error("[ChatGPT] Error in conversation:", error);
+    throw error;
+  }
+}
+
+/**
+ * Ask ChatGPT a general question about campus navigation
+ */
+export async function askChatGPTQuestion(
+  question: string,
+  context: {
+    currentLocation?: string;
+    destination?: string;
+    availableDestinations: PresetDestination[];
+  },
+): Promise<string> {
+  if (!isOpenAIConfigured()) {
+    throw new Error(
+      "OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local",
+    );
+  }
+
+  const destinationList = context.availableDestinations
+    .map((dest) => `- ${dest.label}: ${dest.summary}`)
+    .join("\n");
+
+  const systemPrompt = `You are a helpful AI assistant for Bicol University campus navigation. 
+You help students and visitors navigate the campus and answer questions about campus locations.
+
+Available campus locations:
+${destinationList}
+
+${context.currentLocation ? `Current location: ${context.currentLocation}` : ""}
+${context.destination ? `Current destination: ${context.destination}` : ""}
+
+Provide concise, helpful responses. Keep answers brief (2-3 sentences max) unless detailed information is specifically requested.`;
+
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
+        temperature: 0.7,
+        max_tokens: 150,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`ChatGPT API request failed: ${response.status}`);
+    }
+
+    const data = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    return data.choices?.[0]?.message?.content ?? "I couldn't process that question.";
+  } catch (error) {
+    console.error("[ChatGPT] Error asking question:", error);
+    throw error;
+  }
+}
