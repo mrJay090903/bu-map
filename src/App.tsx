@@ -403,13 +403,7 @@ function App() {
         console.log("[Conversation Voice] Transcribing with FastAPI...");
         try {
           transcript = await transcribeAudioWithFastAPI(audioBlob);
-<<<<<<< HEAD
-=======
-          console.log(
-            "[Voice] Transcription received from FastAPI:",
-            transcript,
-          );
->>>>>>> 0a5410b5ce4fe90a059284c991cd46c3a840ed81
+          console.log("[Conversation Voice] Transcription received:", transcript);
         } catch (fastApiError) {
           console.warn(
             "[Conversation Voice] FastAPI failed, using browser fallback:",
@@ -422,20 +416,6 @@ function App() {
           } else {
             throw fastApiError;
           }
-<<<<<<< HEAD
-=======
-
-          setVoiceFeedback(
-            "FastAPI unavailable. Switching to browser speech...",
-          );
-          transcript = await transcribeWithBrowserSpeechRecognition({
-            signal: controller.signal,
-          });
-          console.log(
-            "[Voice] Transcription received from browser fallback:",
-            transcript,
-          );
->>>>>>> 0a5410b5ce4fe90a059284c991cd46c3a840ed81
         }
       } else {
         console.log("[Conversation Voice] Using browser speech recognition");
@@ -453,7 +433,6 @@ function App() {
         error instanceof Error ? error.message : String(error);
       console.error("[Conversation Voice] Error:", error);
 
-<<<<<<< HEAD
       const errorMsg: ConversationMessage = {
         id: `error-${Date.now()}`,
         role: "assistant",
@@ -461,40 +440,6 @@ function App() {
         timestamp: Date.now(),
       };
       setConversationMessages((prev) => [...prev, errorMsg]);
-=======
-      if (
-        errorMessage.includes("NotAllowedError") ||
-        errorMessage.includes("permission")
-      ) {
-        setLocationError(
-          "Microphone permission denied. Please enable microphone access in your browser settings.",
-        );
-      } else if (errorMessage.includes("NotFoundError")) {
-        setLocationError(
-          "No microphone found. Please connect a microphone and try again.",
-        );
-      } else if (errorMessage.includes("HF API key")) {
-        setLocationError(
-          "Voice transcription setup is missing VITE_HF_API_KEY.",
-        );
-      } else if (
-        errorMessage.includes("Speech recognition error: not-allowed")
-      ) {
-        setLocationError(
-          "Microphone permission denied. Please enable microphone access in your browser settings.",
-        );
-      } else if (errorMessage.includes("Speech recognition error: no-speech")) {
-        setLocationError("No speech detected. Please try again.");
-      } else if (
-        errorMessage.includes("Browser speech recognition is not supported")
-      ) {
-        setLocationError(
-          "Voice recognition is not supported in this browser. Try Chrome or Edge.",
-        );
-      } else {
-        setLocationError(`Voice command failed: ${errorMessage}`);
-      }
->>>>>>> 0a5410b5ce4fe90a059284c991cd46c3a840ed81
     } finally {
       voiceCaptureAbortRef.current = null;
       setIsVoiceListening(false);
@@ -785,7 +730,7 @@ function App() {
   };
 
   return (
-    <main className="relative h-[100dvh] w-screen overflow-hidden bg-slate-100 font-[Manrope] text-slate-900">
+    <main className="relative h-dvh w-screen overflow-hidden bg-slate-100 font-[Manrope] text-slate-900">
       <CampusMapView
         mapCenter={MAP_CENTER}
         focusRequest={focusRequest}
