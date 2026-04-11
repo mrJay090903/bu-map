@@ -18,7 +18,6 @@ import { GUARD_HOUSE, PRESET_DESTINATIONS } from "./data/presetDestinations";
 import { planBestRoutes } from "./services/routePlanner";
 import {
   resolvePresetFromDestination,
-  resolvePresetFromPrompt,
 } from "./utils/destinationMatcher";
 import {
   formatDistance,
@@ -32,14 +31,12 @@ import {
   encodePacket,
 } from "./utils/routePacket";
 import {
-  captureAudioFromMicrophone,
   transcribeAudioWithOpenAI,
   transcribeAudioWithFastAPI,
   isFastAPIVoiceSupportedInBrowser,
   isBrowserSpeechRecognitionSupported,
   isOpenAITranscriptionConfigured,
   isHFTranscriptionConfigured,
-  transcribeWithBrowserSpeechRecognition,
 } from "./utils/voiceRecognition";
 import {
   VoiceActivityDetector,
@@ -47,8 +44,6 @@ import {
   type VADCallbacks,
 } from "./utils/voiceActivityDetection";
 import {
-  isOpenAIConfigured,
-  processVoiceCommandWithChatGPT,
   chatWithAI,
 } from "./services/chatgpt";
 import type {
@@ -225,85 +220,6 @@ function App() {
     }
     setIsVoiceListening(false);
     setVoiceFeedback(null);
-  };
-
-  const runAiVoiceCommand = async (rawCommand: string) => {
-    console.log("[Voice Command] Processing voice input:", rawCommand);
-
-    const command = rawCommand.trim();
-    if (!command) {
-      console.log("[Voice Command] Empty command after trim");
-      setLocationError("Voice command did not capture a destination.");
-      return;
-    }
-
-    // Use ChatGPT for AI-powered voice command processing if configured
-    if (isOpenAIConfigured()) {
-      console.log("[Voice Command] Processing with ChatGPT AI assistant...");
-      setVoiceFeedback("AI is processing your request...");
-      
-      try {
-        const aiResponse = await processVoiceCommandWithChatGPT(
-          command,
-          PRESET_DESTINATIONS,
-        );
-
-        console.log("[Voice Command] ChatGPT response:", aiResponse);
-        
-        if (aiResponse.destination) {
-          // ChatGPT identified a destination - find and navigate to it
-          const matchedPreset = PRESET_DESTINATIONS.find(
-            (dest) => dest.label === aiResponse.destination,
-          );
-
-          if (matchedPreset) {
-            console.log(
-              "[Voice Command] SUCCESS - AI matched destination:",
-              matchedPreset.label,
-            );
-            setVoiceFeedback(aiResponse.message);
-            setTimeout(() => {
-              applyDestination(matchedPreset);
-              setLocationError(null);
-              setVoiceFeedback(null);
-            }, 1500);
-            return;
-          }
-        }
-
-        // ChatGPT couldn't find a clear destination - show its message
-        console.log("[Voice Command] AI needs clarification:", aiResponse.message);
-        setLocationError(aiResponse.message);
-        setVoiceFeedback(null);
-        return;
-      } catch (error) {
-        console.error("[Voice Command] ChatGPT processing failed:", error);
-        setVoiceFeedback(null);
-        // Fall back to basic matching
-        console.log("[Voice Command] Falling back to basic destination matching");
-      }
-    }
-
-    // Fallback: Basic keyword matching
-    console.log(
-      "[Voice Command] Attempting basic match against preset destinations",
-    );
-    const matchedPreset = resolvePresetFromPrompt(command, PRESET_DESTINATIONS);
-
-    if (matchedPreset) {
-      console.log(
-        "[Voice Command] SUCCESS - Destination matched:",
-        matchedPreset.label,
-      );
-      applyDestination(matchedPreset);
-      setLocationError(null);
-      return;
-    }
-
-    console.log("[Voice Command] FAILED - No matching destination found");
-    setLocationError(
-      "Voice command recognized, but no preset destination was matched. Try saying the building name clearly.",
-    );
   };
 
   const onChooseEntryMode = (mode: EntryMode) => {
