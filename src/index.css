@@ -205,6 +205,22 @@ select {
   filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.75));
 }
 
+.destination-highlight path {
+  animation: destination-pulse 2s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.6));
+}
+
+@keyframes destination-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.15);
+  }
+}
+
 .overlay-enter {
   animation: overlay-slide 380ms ease-out both;
 }

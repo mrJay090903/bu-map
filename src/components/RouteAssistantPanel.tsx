@@ -100,18 +100,6 @@ export function RouteAssistantPanel({
 
         {!routeLoading && route ? (
           <>
-            <div className="mb-3 flex gap-2">
-              <div className="rounded-lg bg-cyan-100 px-3 py-2 text-sm font-semibold text-cyan-900">
-                {formatDistance(route.distance)}
-              </div>
-              <div className="rounded-lg bg-blue-100 px-3 py-2 text-sm font-semibold text-blue-900">
-                {formatDuration(route.duration)}
-              </div>
-              <div className="rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-900">
-                {route.profile === "foot" ? "Walking" : "Driving fallback"}
-              </div>
-            </div>
-
             {qrCodeDataUrl && shareLink ? (
               <div className="mb-3 rounded-xl border border-cyan-200 bg-cyan-50 p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-cyan-700">

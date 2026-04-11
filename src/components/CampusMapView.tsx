@@ -209,8 +209,8 @@ export function CampusMapView({
           fillOpacity: 0.9,
         }}
       >
-        <Tooltip direction="top" offset={[0, -12]}>
-          {startLabel}
+        <Tooltip direction="top" offset={[0, -12]} permanent>
+          📍 You are here
         </Tooltip>
       </CircleMarker>
 
@@ -256,15 +256,17 @@ export function CampusMapView({
       {destination ? (
         <CircleMarker
           center={[destination.lat, destination.lon]}
-          radius={8}
+          radius={route ? 12 : 8}
           pathOptions={{
-            color: "#0f172a",
-            fillColor: "#f8fafc",
+            color: route ? "#dc2626" : "#0f172a",
+            fillColor: route ? "#fca5a5" : "#f8fafc",
             fillOpacity: 1,
+            weight: route ? 3 : 2,
           }}
+          className={route ? "destination-highlight" : ""}
         >
-          <Tooltip direction="top" offset={[0, -12]}>
-            Destination
+          <Tooltip direction="top" offset={[0, -12]} permanent={!!route}>
+            {route ? `🎯 ${compactLabel(destination.label)}` : "Destination"}
           </Tooltip>
         </CircleMarker>
       ) : null}
