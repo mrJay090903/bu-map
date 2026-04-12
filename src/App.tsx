@@ -947,8 +947,10 @@ function App() {
         startPoint={startPoint}
         hasDestination={!!destination}
         isPreviewCardCollapsed={isPreviewCardCollapsed}
+        hasQrCode={!!qrCodeDataUrl}
         onOpenDestinationListModal={onOpenDestinationListModal}
         onToggleVoiceCommand={onToggleVoiceCommand}
+        onOpenQrCode={() => setShowQrPreview(true)}
         onChangeMode={() => {
           stopVoiceRecognition();
           setShowDestinationListModal(false);

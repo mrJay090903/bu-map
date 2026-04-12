@@ -5,6 +5,7 @@ import {
   Map as MapIcon,
   Target,
   NavigationOff,
+  QrCode,
 } from "lucide-react";
 import type { EntryMode, Point } from "../types/navigation";
 
@@ -18,6 +19,8 @@ type FloatingActionButtonsProps = {
   onChangeMode: () => void;
   onRecenter: (point: Point) => void;
   onClearRoute: () => void;
+  onOpenQrCode?: () => void;
+  hasQrCode?: boolean;
 };
 
 export function FloatingActionButtons({
@@ -32,6 +35,8 @@ export function FloatingActionButtons({
   onChangeMode,
   onRecenter,
   onClearRoute,
+  onOpenQrCode,
+  hasQrCode,
 }: FloatingActionButtonsProps & {
   hasDestination?: boolean;
   isPreviewCardCollapsed?: boolean;
@@ -101,6 +106,18 @@ export function FloatingActionButtons({
           <Target size={20} className="md:mr-2 shrink-0 md:size-[22px]" />
           <span className="hidden md:inline text-base">Recenter</span>
         </button>
+
+        {hasQrCode && onOpenQrCode && (
+          <button
+            type="button"
+            onClick={onOpenQrCode}
+            className="flex items-center justify-center md:justify-start h-12 w-12 md:px-4 md:w-auto rounded-full border border-blue-300 bg-blue-600 font-semibold text-white shadow-lg transition hover:bg-blue-500"
+            aria-label="Show QR Code"
+          >
+            <QrCode size={20} className="md:mr-2 shrink-0 md:size-[22px]" />
+            <span className="hidden md:inline text-base">QR Code</span>
+          </button>
+        )}
 
         <button
           type="button"
