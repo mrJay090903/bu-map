@@ -38,6 +38,7 @@ export function DestinationPreviewCard({
   onToggleCollapse?: () => void;
 }) {
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+  const [showThumbnailFullscreen, setShowThumbnailFullscreen] = useState(false);
   const [selectedFloorIndex, setSelectedFloorIndex] = useState(0);
   const [showQrModal, setShowQrModal] = useState(false);
   const [selectedDirectoryItemLabel, setSelectedDirectoryItemLabel] = useState<
@@ -45,13 +46,14 @@ export function DestinationPreviewCard({
   >(null);
 
   useEffect(() => {
-    if (!isFullscreenOpen) {
+    if (!isFullscreenOpen && !showThumbnailFullscreen) {
       return;
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsFullscreenOpen(false);
+        setShowThumbnailFullscreen(false);
       }
     };
 
@@ -60,7 +62,7 @@ export function DestinationPreviewCard({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [isFullscreenOpen]);
+  }, [isFullscreenOpen, showThumbnailFullscreen]);
 
   useEffect(() => {
     setSelectedFloorIndex(0);
@@ -95,7 +97,7 @@ export function DestinationPreviewCard({
     selectedPresetDestination?.thumbnail ??
     selectedPresetDestination?.image ??
     fallbackImage;
-  const fullscreenImageSrc =
+  const floorPlanImageSrc =
     activeFloorPlan?.image ?? selectedPresetDestination?.image ?? fallbackImage;
   const previewLabel = compactLabel(destination.label);
 
@@ -152,7 +154,9 @@ export function DestinationPreviewCard({
               <img
                 src={cardImageSrc}
                 alt={`${previewLabel} preview`}
-                className="absolute inset-0 h-full w-full rounded-lg border border-slate-200 object-cover"
+                className="absolute inset-0 h-full w-full rounded-lg border border-slate-200 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setShowThumbnailFullscreen(true)}
+                title="Click to view fullscreen"
               />
             </div>
             <p className="mt-1.5 text-sm font-semibold text-slate-900 md:mt-2">
@@ -291,8 +295,8 @@ export function DestinationPreviewCard({
                 <div className="relative flex-1 min-h-0 overflow-auto md:overflow-hidden md:flex md:items-center md:justify-center rounded-md bg-white border border-slate-100 shadow-sm custom-scrollbar">
                   <div className="relative max-w-full">
                     <img
-                      src={fullscreenImageSrc}
-                      alt={`${previewLabel} full screen preview`}
+                      src={floorPlanImageSrc}
+                      alt={`${previewLabel} floor plan`}
                       className="block w-full max-w-full rounded-md md:max-h-full md:w-auto"
                       style={{ maxHeight: "calc(100vh - 200px)" }}
                     />
@@ -324,6 +328,32 @@ export function DestinationPreviewCard({
                 </p>
               </div>
             </div>
+          </div>
+        </section>
+      ) : null}
+
+      {showThumbnailFullscreen ? (
+        <section
+          className="pointer-events-auto absolute inset-0 z-[1100] flex items-center justify-center bg-slate-950/80 p-4"
+          onClick={() => setShowThumbnailFullscreen(false)}
+          aria-label="Fullscreen thumbnail view"
+        >
+          <div
+            className="relative max-w-[95vw] max-h-[95vh]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={cardImageSrc}
+              alt={`${previewLabel} fullscreen`}
+              className="max-w-full max-h-[95vh] w-auto h-auto rounded-lg shadow-2xl"
+            />
+            <button
+              type="button"
+              onClick={() => setShowThumbnailFullscreen(false)}
+              className="absolute top-4 right-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-lg transition hover:bg-slate-100"
+            >
+              Close
+            </button>
           </div>
         </section>
       ) : null}

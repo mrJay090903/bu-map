@@ -1,5 +1,6 @@
 import type { PresetDestination } from "../types/navigation";
 import type { ConversationMessage } from "../types/conversation";
+import { getCampusDirectoryText } from "../data/campusDirectory";
 
 const OPENAI_API_KEY = (import.meta.env.VITE_OPENAI_API_KEY ?? "").trim();
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
@@ -138,9 +139,15 @@ export async function chatWithAI(
     })
     .join("\n");
 
-  const systemPrompt = `You are a helpful AI assistant for Bicol University campus navigation. You help students and visitors navigate the campus and answer questions about campus locations.
+  // Get comprehensive campus directory
+  const campusDirectory = getCampusDirectoryText();
 
-Available campus locations:
+  const systemPrompt = `You are a helpful AI assistant for Bicol University Polangui Campus navigation. You help students and visitors navigate the campus and answer questions about campus locations, buildings, rooms, and facilities.
+
+COMPLETE CAMPUS DIRECTORY:
+${campusDirectory}
+
+NAVIGABLE DESTINATIONS:
 ${destinationList}
 
 ${context.currentLocation ? `Current location: ${context.currentLocation}` : ""}
@@ -148,16 +155,33 @@ ${context.destination ? `Current destination: ${context.destination}` : ""}
 ${context.isNavigating ? "User is currently navigating to a destination." : ""}
 
 You can:
-1. Answer questions about campus locations and facilities
-2. Provide directions to buildings
-3. Give information about what's available on campus
-4. Have casual conversation about campus life
+1. Answer questions about specific rooms, laboratories, offices, and facilities
+2. Tell users which building and floor a room is located on
+3. Provide directions to buildings and rooms
+4. Give information about what's available on campus
+5. Help users find specific departments, offices, or facilities
+6. Have casual conversation about campus life
 
-When a user wants to navigate somewhere, respond with JSON that includes an action:
-{"message": "I'll navigate you to [destination]", "action": {"type": "navigate", "destination": "exact destination label"}}
+When a user wants to navigate somewhere, respond with JSON that includes an action.
+CRITICAL NAVIGATION RULES:
+- When user asks for "library", "librarian", or library-related rooms → navigate to "Salceda Building" (library is on 2nd floor)
+- When user asks for specific computer labs (CL1-CL6) → navigate to "Center for Computer and Engineering Studies / Salceda Building"
+- When user asks for "gym", "sports", "fitness" → navigate to "BUP GYM"
+- When user asks for "nursing" related rooms → navigate to "Nursing Department"
+- When user asks for "registrar", "enrollment" → navigate to "Registrar's Office"
+- Always match the EXACT destination label from the NAVIGABLE DESTINATIONS list
 
-For general questions, just respond normally with:
-{"message": "your helpful response"}
+Response format for navigation:
+{"message": "I'll navigate you to [destination]. The [specific room] is on [floor] floor.", "action": {"type": "navigate", "destination": "exact destination label from NAVIGABLE DESTINATIONS"}}
+
+For informational questions only (no navigation):
+{"message": "your detailed, helpful response about the location"}
+
+IMPORTANT: 
+- Use the complete campus directory to provide accurate room and building information
+- When mentioning rooms, always include the building name and floor
+- Be specific about room codes (like SB-11, CL1, ECB 201, etc.)
+- If a user asks about a specific room or office, tell them exactly which building and floor it's on
 
 Be friendly, helpful, and conversational. Keep responses concise but informative.`;
 

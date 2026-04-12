@@ -10,7 +10,7 @@ import { DestinationListModal } from "./components/DestinationListModal";
 import { DestinationPreviewCard } from "./components/DestinationPreviewCard";
 import { FloatingActionButtons } from "./components/FloatingActionButtons";
 import { NextStopPrompt } from "./components/NextStopPrompt";
-import { RouteAssistantPanel } from "./components/RouteAssistantPanel";
+import { QrPreviewModal } from "./components/QrPreviewModal";
 import { StatusToast } from "./components/StatusToast";
 import { TopDirectionBanner } from "./components/TopDirectionBanner";
 import { WelcomeModal } from "./components/WelcomeModal";
@@ -22,7 +22,7 @@ import {
 } from "./utils/destinationMatcher";
 import {
   formatDistance,
-  formatDuration,
+  // formatDuration, // Unused after removing RouteAssistantPanel
   compactLabel,
 } from "./utils/formatters";
 import { calculateBearing } from "./utils/geo";
@@ -44,6 +44,10 @@ import {
   processVoiceCommandWithChatGPT,
   chatWithAI,
 } from "./services/chatgpt";
+import {
+  transcribeAudioWithOpenAI,
+  isOpenAITranscriptionConfigured,
+} from "./services/openaiTranscription";
 import type {
   Destination,
   EntryMode,
@@ -63,7 +67,7 @@ function App() {
   const [locationError, setLocationError] = useState<string | null>(null);
 
   const [route, setRoute] = useState<RouteInfo | null>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
+  const [_routeLoading, setRouteLoading] = useState(false); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [routeError, setRouteError] = useState<string | null>(null);
 
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
@@ -87,6 +91,7 @@ function App() {
   const [isPreviewCardCollapsed, setIsPreviewCardCollapsed] = useState(false);
   const [showDestinationListModal, setShowDestinationListModal] =
     useState(false);
+  const [showQrPreview, setShowQrPreview] = useState(false);
   const voiceCaptureAbortRef = useRef<AbortController | null>(null);
 
   // AI Conversation state
@@ -96,19 +101,20 @@ function App() {
   >([]);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
 
-  const isShareLinkPublic = useMemo(() => {
-    if (PUBLIC_BASE_URL) {
-      return true;
-    }
+  // const isShareLinkPublic = useMemo(() => {
+  //   if (PUBLIC_BASE_URL) {
+  //     return true;
+  //   }
 
-    const host = window.location.hostname.toLowerCase();
-    return host !== "localhost" && host !== "127.0.0.1";
-  }, []);
+  //   const host = window.location.hostname.toLowerCase();
+  //   return host !== "localhost" && host !== "127.0.0.1";
+  // }, []);
 
   const startPoint = currentStartPoint;
   const activeEntryMode = entryMode ?? "quick";
   const voiceRecognitionSupported = useMemo(
     () =>
+      isOpenAITranscriptionConfigured() ||
       (isHFTranscriptionConfigured() && isFastAPIVoiceSupportedInBrowser()) ||
       isBrowserSpeechRecognitionSupported(),
     [],
@@ -317,6 +323,12 @@ function App() {
     if (mode === "quick") {
       setShowDestinationDetails(false);
     }
+
+    // Open AI conversation modal when AI voice command is selected
+    if (mode === "ai") {
+      setShowAiConversation(true);
+      // Voice will auto-start via the modal's useEffect
+    }
   };
 
   const onToggleVoiceCommand = () => {
@@ -327,10 +339,17 @@ function App() {
 
   // Send a text message in the AI conversation
   const onSendConversationMessage = async (messageText: string) => {
+    // Validate message - trim and check if not empty
+    const trimmedMessage = messageText.trim();
+    if (!trimmedMessage) {
+      console.log("[AI Conversation] Skipping empty message");
+      return;
+    }
+
     const userMessage: ConversationMessage = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: messageText,
+      content: trimmedMessage,
       timestamp: Date.now(),
     };
 
@@ -338,7 +357,7 @@ function App() {
     setIsAiProcessing(true);
 
     try {
-      const response = await chatWithAI(messageText, conversationMessages, {
+      const response = await chatWithAI(trimmedMessage, conversationMessages, {
         currentLocation: startLabel,
         destination: destination?.label,
         availableDestinations: PRESET_DESTINATIONS,
@@ -354,16 +373,15 @@ function App() {
 
       setConversationMessages((prev) => [...prev, assistantMessage]);
 
-      // If AI wants to navigate somewhere, do it
+      // If AI wants to navigate somewhere, do it immediately
       if (response.action?.type === "navigate") {
         const matchedDest = PRESET_DESTINATIONS.find(
           (dest) => dest.label === response.action?.destination,
         );
         if (matchedDest) {
-          setTimeout(() => {
-            applyDestination(matchedDest);
-            setShowAiConversation(false);
-          }, 1500);
+          // Apply destination and show route immediately
+          applyDestination(matchedDest);
+          // Keep AI conversation visible - don't close it
         }
       }
     } catch (error) {
@@ -396,11 +414,44 @@ function App() {
     voiceCaptureAbortRef.current = controller;
 
     try {
-      const useFastApiTranscription =
-        isHFTranscriptionConfigured() && isFastAPIVoiceSupportedInBrowser();
       let transcript = "";
 
-      if (useFastApiTranscription) {
+      // Use OpenAI Whisper if configured
+      if (isOpenAITranscriptionConfigured()) {
+        console.log("[Conversation Voice] Capturing audio from microphone...");
+        const audioBlob = await captureAudioFromMicrophone({
+          maxDurationMs: 5000,
+          timesliceMs: 250,
+          signal: controller.signal,
+        });
+
+        console.log("[Conversation Voice] Transcribing with OpenAI Whisper...");
+        try {
+          transcript = await transcribeAudioWithOpenAI(audioBlob, {
+            model: "gpt-4o-mini-transcribe",
+          });
+          console.log(
+            "[Conversation Voice] OpenAI transcription received:",
+            transcript,
+          );
+        } catch (openaiError) {
+          console.warn(
+            "[Conversation Voice] OpenAI failed, using browser fallback:",
+            openaiError,
+          );
+          if (isBrowserSpeechRecognitionSupported()) {
+            transcript = await transcribeWithBrowserSpeechRecognition({
+              signal: controller.signal,
+            });
+          } else {
+            throw openaiError;
+          }
+        }
+      } else if (
+        isHFTranscriptionConfigured() &&
+        isFastAPIVoiceSupportedInBrowser()
+      ) {
+        // Fallback to FastAPI if OpenAI not configured
         console.log("[Conversation Voice] Capturing audio from microphone...");
         const audioBlob = await captureAudioFromMicrophone({
           maxDurationMs: 4500,
@@ -429,15 +480,20 @@ function App() {
           }
         }
       } else {
+        // Final fallback to browser speech recognition
         console.log("[Conversation Voice] Using browser speech recognition");
         transcript = await transcribeWithBrowserSpeechRecognition({
           signal: controller.signal,
         });
       }
 
-      if (transcript) {
-        console.log("[Conversation Voice] Transcript:", transcript);
-        await onSendConversationMessage(transcript);
+      // Validate transcript before sending
+      const trimmedTranscript = transcript.trim();
+      if (trimmedTranscript && trimmedTranscript.length > 0) {
+        console.log("[Conversation Voice] Valid transcript:", trimmedTranscript);
+        await onSendConversationMessage(trimmedTranscript);
+      } else {
+        console.log("[Conversation Voice] Empty or invalid transcript, skipping");
       }
     } catch (error) {
       const errorMessage =
@@ -454,6 +510,14 @@ function App() {
     } finally {
       voiceCaptureAbortRef.current = null;
       setIsVoiceListening(false);
+    }
+  };
+
+  // Start voice recognition (called automatically by modal)
+  const onStartConversationVoice = () => {
+    // Only start if not already listening
+    if (!isVoiceListening && !isAiProcessing) {
+      onToggleConversationVoice();
     }
   };
 
@@ -669,6 +733,24 @@ function App() {
     };
   }, [route, simulationIndex, isSimulationPaused, simulationSpeed]);
 
+  // Auto-reset to welcome page after 3 minutes when AI conversation closes with route
+  useEffect(() => {
+    if (!showAiConversation && route && destination) {
+      const resetTimer = window.setTimeout(() => {
+        // Reset to welcome page
+        setDestination(null);
+        setRoute(null);
+        setShowWelcomeModal(true);
+        setEntryMode(null);
+        setConversationMessages([]);
+      }, 180000); // 3 minutes
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
+    }
+  }, [showAiConversation, route, destination]);
+
   const visibleStatus = useMemo(() => {
     if (voiceFeedback) {
       return voiceFeedback;
@@ -773,8 +855,15 @@ function App() {
         isProcessing={isAiProcessing}
         voiceSupported={voiceRecognitionSupported}
         onClose={onCloseAiConversation}
-        onSendMessage={onSendConversationMessage}
-        onToggleVoice={onToggleConversationVoice}
+        onStartVoice={onStartConversationVoice}
+        onOpenQrCode={() => setShowQrPreview(true)}
+      />
+
+      <QrPreviewModal
+        show={showQrPreview}
+        qrCodeDataUrl={qrCodeDataUrl}
+        onClose={() => setShowQrPreview(false)}
+        onCopyShareLink={onCopyShareLink}
       />
 
       <TopDirectionBanner
@@ -859,21 +948,6 @@ function App() {
       />
 
       <StatusToast message={visibleStatus} />
-
-      <RouteAssistantPanel
-        destination={destination}
-        startLabel={startLabel}
-        routeLoading={routeLoading}
-        route={route}
-        routeError={routeError}
-        formatDistance={formatDistance}
-        formatDuration={formatDuration}
-        compactLabel={compactLabel}
-        qrCodeDataUrl={qrCodeDataUrl}
-        shareLink={shareLink}
-        isShareLinkPublic={isShareLinkPublic}
-        onCopyShareLink={onCopyShareLink}
-      />
 
       <NextStopPrompt
         show={showNextStopPrompt}

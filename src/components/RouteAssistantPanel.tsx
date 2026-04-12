@@ -24,7 +24,7 @@ export function RouteAssistantPanel({
   route,
   routeError,
   formatDistance,
-  formatDuration,
+  // formatDuration, // unused
   compactLabel,
   qrCodeDataUrl,
   shareLink,

@@ -35,7 +35,7 @@ export async function transcribeAudioWithOpenAI(
 
   const {
     model = "gpt-4o-mini-transcribe", // Use newer model by default
-    prompt = "Bicol University Polangui campus navigation. Buildings: Salceda Building, Computer and Engineering Studies, Nursing Department, Administration Building, Gymnasium, Library, Canteen, Food Technology, Automotive Building. Common terms: CCES, ECB, SB, Computer Lab (CL1-CL6), Engineering Lab, Chemistry Lab (SB-11, SB-12), Library, NSTP, ROTC, Registrar, Guidance Office, Alumni Office, Cashier.",
+    prompt = "", // Empty prompt - voice only mode
     language = "en",
     temperature = 0,
   } = options;
@@ -45,7 +45,8 @@ export async function transcribeAudioWithOpenAI(
   formData.append("model", model);
   formData.append("response_format", "text");
   
-  if (prompt) {
+  // Only add prompt if explicitly provided and not empty
+  if (prompt && prompt.trim().length > 0) {
     formData.append("prompt", prompt);
   }
   

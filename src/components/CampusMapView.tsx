@@ -168,7 +168,7 @@ export function CampusMapView({
   effectiveHeading,
   gyroEnabled,
   startPoint,
-  startLabel,
+  // startLabel, // unused
   activeEntryMode,
   destinations,
   destination,

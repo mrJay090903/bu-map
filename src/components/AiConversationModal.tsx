@@ -1,4 +1,4 @@
-import { Bot, Mic, MicOff, Send, X } from "lucide-react";
+import { Bot, Mic, X, QrCode } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { ConversationMessage } from "../types/conversation";
 
@@ -9,8 +9,8 @@ type AiConversationModalProps = {
   isProcessing: boolean;
   voiceSupported: boolean;
   onClose: () => void;
-  onSendMessage: (message: string) => void;
-  onToggleVoice: () => void;
+  onStartVoice: () => void;
+  onOpenQrCode?: () => void;
 };
 
 export function AiConversationModal({
@@ -20,11 +20,35 @@ export function AiConversationModal({
   isProcessing,
   voiceSupported,
   onClose,
-  onSendMessage,
-  onToggleVoice,
+  onStartVoice,
+  onOpenQrCode,
 }: AiConversationModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const hasStartedRef = useRef(false);
+
+  // Auto-start voice recognition when modal opens
+  useEffect(() => {
+    if (show && voiceSupported && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      // Start after a short delay to allow modal to render
+      setTimeout(() => {
+        onStartVoice();
+      }, 800);
+    } else if (!show) {
+      hasStartedRef.current = false;
+    }
+  }, [show, voiceSupported, onStartVoice]);
+
+  // Auto-restart voice after AI responds
+  useEffect(() => {
+    if (show && !isListening && !isProcessing && messages.length > 0 && voiceSupported) {
+      // Restart listening after AI responds
+      const timer = setTimeout(() => {
+        onStartVoice();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [show, isListening, isProcessing, messages.length, voiceSupported, onStartVoice]);
 
   useEffect(() => {
     if (show) {
@@ -36,20 +60,11 @@ export function AiConversationModal({
     return null;
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const input = inputRef.current;
-    if (input && input.value.trim()) {
-      onSendMessage(input.value.trim());
-      input.value = "";
-    }
-  };
-
   return (
-    <section className="pointer-events-none absolute inset-0 z-[1000] flex items-end justify-center bg-slate-950/70 p-0 sm:p-4 md:items-center">
-      <div className="pointer-events-auto relative flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden rounded-none border-0 sm:border border-cyan-100/70 bg-white shadow-[0_38px_120px_-45px_rgba(15,23,42,0.95)] sm:h-[90vh] sm:rounded-3xl md:h-[600px]">
+    <section className="pointer-events-auto absolute right-0 top-0 bottom-0 z-[900] w-full max-w-md flex flex-col overflow-hidden border-l border-slate-300/30 bg-white/95 shadow-[0_38px_120px_-45px_rgba(15,23,42,0.95)] backdrop-blur-md">
+      <div className="relative flex h-full w-full flex-col overflow-hidden">
         {/* Header */}
-        <div className="relative border-b border-slate-200 bg-linear-to-r from-cyan-500 to-sky-600 px-5 py-4">
+        <div className="relative border-b border-slate-200 bg-gradient-to-r from-cyan-500 to-sky-600 px-5 py-4">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.2),transparent_50%)]" />
           <div className="relative flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -67,13 +82,25 @@ export function AiConversationModal({
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2">
+              {onOpenQrCode && (
+                <button
+                  type="button"
+                  onClick={onOpenQrCode}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
+                  title="Open QR Code"
+                >
+                  <QrCode className="h-5 w-5" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white/80 transition hover:bg-white/20 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -81,42 +108,32 @@ export function AiConversationModal({
         <div className="flex-1 overflow-y-auto bg-slate-50 p-4">
           {messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-cyan-100 to-sky-100">
-                <Bot className="h-8 w-8 text-cyan-600" />
+              <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-cyan-100 to-sky-100">
+                <Mic className="h-8 w-8 text-cyan-600" />
               </div>
               <p className="mb-2 text-lg font-semibold text-slate-900">
-                Hello! I'm your AI campus guide
+                Voice-Powered AI Campus Guide
               </p>
               <p className="max-w-sm text-sm text-slate-600">
-                Ask me anything about navigating Bicol University campus. You
-                can ask for directions, building information, or any
-                campus-related questions.
+                Speak naturally to ask about navigating Bicol University campus,
+                building locations, offices, or any campus-related questions.
+                The AI is listening automatically.
               </p>
               <div className="mt-6 space-y-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Try asking:
+                  Try saying:
                 </p>
-                <button
-                  type="button"
-                  onClick={() => onSendMessage("Where is the library?")}
-                  className="block w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50"
-                >
-                  "Where is the library?"
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSendMessage("Take me to the gym")}
-                  className="block w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50"
-                >
-                  "Take me to the gym"
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSendMessage("What buildings are available?")}
-                  className="block w-full rounded-lg border border-slate-200 bg-white px-4 py-2 text-left text-sm text-slate-700 transition hover:border-cyan-300 hover:bg-cyan-50"
-                >
-                  "What buildings are available?"
-                </button>
+                <div className="space-y-2 text-sm text-slate-600">
+                  <p className="rounded-lg border border-slate-200 bg-white px-4 py-2">
+                    "Where is the library?"
+                  </p>
+                  <p className="rounded-lg border border-slate-200 bg-white px-4 py-2">
+                    "Take me to the Computer Lab"
+                  </p>
+                  <p className="rounded-lg border border-slate-200 bg-white px-4 py-2">
+                    "What buildings are available?"
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
@@ -129,7 +146,7 @@ export function AiConversationModal({
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-3 ${
                       message.role === "user"
-                        ? "bg-linear-to-br from-cyan-500 to-sky-600 text-white"
+                        ? "bg-gradient-to-br from-cyan-500 to-sky-600 text-white"
                         : "border border-slate-200 bg-white text-slate-900"
                     }`}
                   >
@@ -168,59 +185,35 @@ export function AiConversationModal({
           )}
         </div>
 
-        {/* Voice Listening Indicator */}
-        {isListening && (
-          <div className="border-t border-cyan-200 bg-linear-to-r from-cyan-50 to-sky-50 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center">
-                <div className="relative flex h-6 w-6 items-center justify-center">
+        {/* Voice Status Indicator */}
+        <div className="border-t border-slate-200 bg-white p-4">
+          <div className="flex items-center justify-center gap-3 rounded-xl bg-gradient-to-br from-cyan-50 to-sky-50 p-4">
+            <div className="relative flex h-10 w-10 items-center justify-center">
+              {isListening ? (
+                <>
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75"></span>
-                  <Mic className="relative h-4 w-4 text-cyan-600" />
+                  <Mic className="relative h-6 w-6 text-cyan-600" />
+                </>
+              ) : isProcessing ? (
+                <div className="flex gap-1">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-500 [animation-delay:-0.3s]"></span>
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-500 [animation-delay:-0.15s]"></span>
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-cyan-500"></span>
                 </div>
-              </div>
-              <p className="text-sm font-medium text-cyan-900">
-                Listening... speak now
+              ) : (
+                <Mic className="h-6 w-6 text-slate-400" />
+              )}
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-slate-900">
+                {isListening
+                  ? "Listening..."
+                  : isProcessing
+                    ? "AI is thinking..."
+                    : "Ready to assist"}
               </p>
             </div>
           </div>
-        )}
-
-        {/* Input */}
-        <div className="border-t border-slate-200 bg-white p-4">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              placeholder="Type your question or use voice..."
-              disabled={isListening || isProcessing}
-              className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 disabled:bg-slate-50 disabled:text-slate-400"
-            />
-            {voiceSupported && (
-              <button
-                type="button"
-                onClick={onToggleVoice}
-                disabled={isProcessing}
-                className={`flex h-10 w-10 items-center justify-center rounded-xl transition disabled:opacity-50 ${
-                  isListening
-                    ? "bg-red-500 text-white hover:bg-red-600"
-                    : "border border-slate-300 bg-white text-slate-700 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-600"
-                }`}
-              >
-                {isListening ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </button>
-            )}
-            <button
-              type="submit"
-              disabled={isListening || isProcessing}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-br from-cyan-500 to-sky-600 text-white transition hover:from-cyan-400 hover:to-sky-500 disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          </form>
         </div>
       </div>
     </section>
