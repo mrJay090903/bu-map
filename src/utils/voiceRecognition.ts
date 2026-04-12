@@ -29,20 +29,14 @@ export type VoiceRecognitionInstance = {
 
 export type VoiceRecognitionConstructor = new () => VoiceRecognitionInstance;
 
-// Keep HuggingFace config for backward compatibility, but OpenAI is now preferred
 const HF_API_KEY = (import.meta.env.VITE_HF_API_KEY ?? "").trim();
 const FASTAPI_TRANSCRIBE_URL = (
   import.meta.env.VITE_FASTAPI_TRANSCRIBE_URL ??
   "https://veccode-wish.hf.space/transcribe"
 ).trim();
-const OPENAI_API_KEY = (import.meta.env.VITE_OPENAI_API_KEY ?? "").trim();
 
 export function isHFTranscriptionConfigured(): boolean {
   return HF_API_KEY.length > 0;
-}
-
-export function isOpenAITranscriptionConfigured(): boolean {
-  return OPENAI_API_KEY.length > 0;
 }
 
 export function getVoiceRecognitionConstructor(): VoiceRecognitionConstructor | null {
@@ -82,69 +76,8 @@ export function isFastAPIVoiceSupportedInBrowser(): boolean {
 }
 
 /**
- * Transcribe audio using OpenAI's Transcription API
- * Preferred method - uses same API key as ChatGPT
- */
-export async function transcribeAudioWithOpenAI(
-  audioBlob: Blob,
-): Promise<string> {
-  if (!isOpenAITranscriptionConfigured()) {
-    throw new Error(
-      "OpenAI API key not configured. Please set VITE_OPENAI_API_KEY in .env.local",
-    );
-  }
-
-  const formData = new FormData();
-  formData.append("file", audioBlob, "audio.webm");
-  formData.append("model", "gpt-4o-mini-transcribe");
-  formData.append("response_format", "text");
-  formData.append("language", "en");
-
-  console.log(
-    "[OpenAI] Sending audio to transcription API:",
-    {
-      size: audioBlob.size,
-      type: audioBlob.type,
-    }
-  );
-
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(
-      "[OpenAI] Transcription failed with status:",
-      response.status,
-      errorText,
-    );
-
-    let errorMessage = `OpenAI transcription failed: ${response.status} ${response.statusText}`;
-    
-    if (response.status === 401) {
-      errorMessage = "Invalid OpenAI API key. Please check your VITE_OPENAI_API_KEY in .env.local";
-    } else if (response.status === 429) {
-      errorMessage = "OpenAI rate limit exceeded. Please try again in a moment.";
-    } else if (response.status === 413) {
-      errorMessage = "Audio file too large (max 25 MB). Please record a shorter message.";
-    }
-
-    throw new Error(errorMessage);
-  }
-
-  const transcript = await response.text();
-  console.log("[OpenAI] Transcription successful:", transcript);
-  return transcript.trim();
-}
-
-/**
- * Transcribe audio using FastAPI endpoint (HuggingFace)
- * Fallback method - requires separate HF API key
+ * Transcribe audio using FastAPI endpoint
+ * Sends audio blob to the Hugging Face Space endpoint for transcription
  */
 export async function transcribeAudioWithFastAPI(
   audioBlob: Blob,
@@ -306,15 +239,7 @@ export async function captureAudioFromMicrophone(
   const { maxDurationMs = 4500, timesliceMs = 250, signal } = options;
 
   console.log("[Microphone] Requesting microphone access...");
-  const stream = await navigator.mediaDevices.getUserMedia({ 
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-      sampleRate: 48000,
-      channelCount: 1
-    } 
-  });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   console.log("[Microphone] Microphone access granted");
 
   if (signal?.aborted) {

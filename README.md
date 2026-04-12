@@ -5,8 +5,8 @@ An intelligent campus navigation system for Bicol University with AI-powered voi
 ## Features
 
 - 🗺️ **Interactive Campus Map** - Navigate the Bicol University campus with an interactive map
-- 🎤 **Voice Commands** - Use voice to search for destinations with OpenAI's transcription
-- 🤖 **ChatGPT AI Assistant** - Intelligent voice command processing with natural language understanding
+- 🎤 **Voice Commands** - Use voice to search for destinations (supports browser speech recognition and HuggingFace FastAPI)
+- 🤖 **ChatGPT AI Assistant** - Intelligent voice command processing with OpenAI's ChatGPT for natural language understanding
 - 🚶 **Route Planning** - Get walking and driving directions between campus locations
 - 📍 **Preset Destinations** - Quick access to common campus buildings and facilities
 - 📱 **Mobile Friendly** - Responsive design for mobile devices
@@ -14,25 +14,20 @@ An intelligent campus navigation system for Bicol University with AI-powered voi
 
 ## AI Voice Assistant
 
-The app integrates OpenAI for comprehensive voice navigation with a single API key:
+The app integrates ChatGPT to provide intelligent conversational navigation:
 
-- **OpenAI Transcription**: High-quality speech-to-text using `gpt-4o-mini-transcribe` model
-- **ChatGPT Intelligence**: Natural language understanding for destination requests
-- **Conversational Interface**: Chat window for natural conversations with the AI assistant
-- **Natural Language Understanding**: Say "take me to the gym" or "where is the library"
-- **Full Route Access**: AI provides detailed route information including distance, duration, and turn-by-turn directions
-- **Ongoing Conversation**: Ask follow-up questions or request clarifications in a natural chat flow
+- **Conversational Interface**: Click "AI Voice Command" to open a chat window where you can have natural conversations with the AI assistant
+- **Natural Language Understanding**: Say "take me to the gym" or "where is the library" and ChatGPT will understand your intent
+- **Ongoing Conversation**: Ask follow-up questions, get building information, or request clarifications in a natural chat flow
 - **Voice & Text Input**: Use voice commands or type your questions directly in the chat interface
-- **Smart Navigation**: AI triggers navigation to destinations based on your conversation
-- **Route Queries**: Ask "How far is it?", "What's the next turn?", "How long will it take?"
-- **Fallback Support**: Automatic fallback to browser speech recognition if needed
+- **Contextual Responses**: Get helpful clarifications when your request is ambiguous
+- **Smart Navigation**: AI can trigger navigation to destinations based on your conversation
+- **Fallback Support**: If ChatGPT is unavailable, falls back to basic keyword matching
 
 ### Conversation Features
 
 - **Multi-turn dialogue**: Continue conversations with context awareness
 - **Building information**: Ask about facilities, locations, and campus features
-- **Route details**: Get distance, duration, and step-by-step navigation instructions
-- **Navigation assistance**: "What's my next turn?", "How much farther?", "Show me the route to..."
 - **Flexible interaction**: Switch between voice input and typing seamlessly
 - **Visual feedback**: See your conversation history with timestamps
 - **Suggested questions**: Quick-start prompts to get you started
@@ -44,11 +39,9 @@ The app integrates OpenAI for comprehensive voice navigation with a single API k
    - **Type a message** in the text input, or
    - **Click the microphone icon** to speak
 3. For voice input:
-   - Audio is captured from your microphone
-   - **Primary**: Transcribed using OpenAI's `gpt-4o-mini-transcribe` model (fast, accurate)
-   - **Fallback 1**: HuggingFace FastAPI endpoint (if configured)
-   - **Fallback 2**: Browser Speech Recognition API (works offline)
-4. The transcribed message is sent to ChatGPT with full conversation context
+   - Audio is transcribed using either HuggingFace FastAPI or browser Speech Recognition
+   - Transcribed text is sent as a message
+4. The message is sent to ChatGPT with full conversation context
 5. ChatGPT responds based on:
    - Conversation history
    - Available campus destinations
@@ -56,52 +49,17 @@ The app integrates OpenAI for comprehensive voice navigation with a single API k
 6. If the AI detects a navigation request, it automatically triggers navigation to that location
 7. User can continue the conversation with follow-up questions or new requests
 
-### Voice Transcription Priority
+## Setup
 
-The system uses a smart fallback chain for maximum reliability:
+### 1. Clone the repository
 
-1. **OpenAI Transcription** (Primary) - `gpt-4o-mini-transcribe`
-   - Highest quality transcription
-   - Same API key as ChatGPT
-   - Supports prompting for campus-specific terms
-   - Works on all major browsers
-
-2. **HuggingFace FastAPI** (Fallback 1) - Optional
-   - Secondary option if OpenAI fails
-   - Requires separate HF API key
-   - Good for redundancy
-
-3. **Browser Speech Recognition** (Fallback 2):
-
-```env
-# ============================================
-# OpenAI API Configuration (RECOMMENDED)
-# ============================================
-# OpenAI API Key - Used for BOTH ChatGPT AI assistance AND voice transcription
-# This is the primary method - only one API key needed!
-# Get your API key from: https://platform.openai.com/api-keys
-VITE_OPENAI_API_KEY=sk-your-openai-api-key-here
-
-# ============================================
-# Optional Configuration
-# ============================================
-# Public URL for QR code sharing (optional)
-VITE_PUBLIC_BASE_URL=http://192.168.1.2:5177
-
-# HuggingFace/FastAPI fallback (optional - only if you want redundancy)
-VITE_FASTAPI_TRANSCRIBE_URL=https://veccode-wish.hf.space/transcribe
-VITE_HF_API_KEY=hf_your_huggingface_api_key_here
+```bash
+git clone <repository-url>
+cd bu-map
 ```
 
-**Required:**
-- **OpenAI API Key**: One key for both ChatGPT conversation AND voice transcription
-  - Sign up at [OpenAI Platform](https://platform.openai.com/api-keys)
-  - Create an API key
-  - Add billing (pay-as-you-go, very affordable)
+### 2. Install dependencies
 
-**Optional:**
-- **HuggingFace API Key**: Only needed if you want a fallback transcription method
-  -
 ```bash
 npm install
 ```
@@ -138,11 +96,8 @@ TheThe AI conversation modal opens
 5. The AI assistant will respond and can navigate you to the location
 
 **Example Interactions:**
-- "Take me to the gym" → AI navigates to Gym B and provides route details
+- "Take me to the gym" → AI navigates to Gym B
 - "Where can I find the library?" → AI provides info and offers navigation
-- "How far is the Computer Studies building?" → AI provides distance and estimated time
-- "What's my next turn?" → AI tells you the next navigation step
-- "How long will it take to get there?" → AI provides duration from current route
 - "What buildings are available?" → AI lists all campus locations
 - "Tell me about the Computer Studies building" → AI provides details
 - "I need to go to class" → AI asks which building and helps clarifydestination]" or "Where is [building name]"

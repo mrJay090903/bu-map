@@ -15,108 +15,18 @@ body,
   width: 100%;
   height: 100%;
   margin: 0;
-  /* Mobile-specific touch handling */
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-}
-
-/* Prevent double-tap zoom on buttons and interactive elements */
-button,
-a,
-input,
-textarea,
-select {
-  touch-action: manipulation;
+  font-size: 22px;
 }
 
 .leaflet-container {
   font-family: 'Manrope', sans-serif;
   background: #dbeafe;
   transition: transform 220ms linear;
-  /* Enable touch interactions on mobile */
-  touch-action: pan-x pan-y;
 }
 
 .leaflet-container.sim-nav-mode {
   transform: scale(1.08) rotate(var(--map-rotation, 0deg));
   transform-origin: 50% 50%;
-}
-
-/* AI Modal Animations */
-@keyframes slide-in-from-bottom {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-from-bottom-2 {
-  from {
-    opacity: 0;
-    transform: translateY(0.5rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-from-bottom-4 {
-  from {
-    opacity: 0;
-    transform: translateY(2rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-in {
-  animation-fill-mode: both;
-}
-
-.fade-in {
-  animation-name: fade-in;
-}
-
-.slide-in-from-bottom {
-  animation-name: slide-in-from-bottom;
-}
-
-.slide-in-from-bottom-2 {
-  animation-name: slide-in-from-bottom-2;
-}
-
-.slide-in-from-bottom-4 {
-  animation-name: slide-in-from-bottom-4;
-}
-
-.duration-300 {
-  animation-duration: 300ms;
-}
-
-.duration-700 {
-  animation-duration: 700ms;
-}
-
-/* Text shadow for better readability */
-.text-shadow-sm {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .leaflet-control-attribution {
