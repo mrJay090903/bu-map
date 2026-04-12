@@ -501,15 +501,24 @@ function App() {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error("[Conversation Voice] Error:", error);
-
+      
       // Don't show error messages for common microphone issues
       const isMicPermissionError = errorMessage.includes("Requested device not found") ||
                                    errorMessage.includes("Permission denied") ||
                                    errorMessage.includes("NotAllowedError") ||
                                    errorMessage.includes("NotFoundError") ||
                                    errorMessage.includes("AbortError") ||
-                                   errorMessage.toLowerCase().includes("microphone");
+                                   errorMessage.includes("cancelled") ||
+                                   errorMessage.toLowerCase().includes("microphone") ||
+                                   errorMessage.toLowerCase().includes("device") ||
+                                   errorMessage.toLowerCase().includes("media");
+
+      // Only log unexpected errors
+      if (!isMicPermissionError) {
+        console.error("[Conversation Voice] Error:", error);
+      } else {
+        console.log("[Conversation Voice] Microphone not available (expected when mic is off)");
+      }
 
       // Only show error message for unexpected errors
       if (!isMicPermissionError) {
