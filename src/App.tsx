@@ -592,7 +592,6 @@ function App() {
       setStartLabel(packet.sl || "Shared Start");
       setDestination(destinationFromPacket);
       setRoute(null);
-      setFocusRequest({ point: startFromPacket, zoom: 19 });
       setRouteError(null);
       setIsScannedRoute(true);
       setShowScannedRouteWelcome(true);
@@ -830,6 +829,7 @@ function App() {
     setEntryMode("quick");
     setShowDestinationDetails(true);
     setIsPreviewCardCollapsed(false);
+    // Let RouteBoundsController handle the map fitting
   };
 
   const onCancelScannedRoute = () => {
