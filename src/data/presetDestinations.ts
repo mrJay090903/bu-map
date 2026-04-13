@@ -26,6 +26,7 @@ import thumbNursing from "../assets/Thumbnails/NursingThumb.jpg";
 import thumbRegistrar from "../assets/Thumbnails/RegistrarThumb.jpg";
 import thumbSalceda from "../assets/Thumbnails/SalcedaBuildingThumb.jpg";
 import thumbAutomotive from "../assets/Thumbnails/AutomotiveThumb.jpg";
+import thumbEntrep from "../assets/Thumbnails/EntrepThumb.jpg";
 
 import type { Point, PresetDestination } from "../types/navigation";
 
@@ -170,6 +171,19 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       "Useful destination for quick food and refreshment breaks",
     ],
     keywords: ["canteen", "food", "cafeteria", "eat"],
+  },
+  {
+    label: "Entrepreneurship Department",
+    lat: 13.29649,
+    lon: 123.48445,
+    image: destinationAdminImage,
+    thumbnail: thumbEntrep,
+    summary: "Academic department for entrepreneurship and food technology studies.",
+    details: [
+      "Located next to the BUP Canteen",
+      "Houses food processing laboratories and sensory evaluation rooms",
+    ],
+    keywords: ["entrepreneurship", "entrep", "food tech", "ftb", "business"],
   },
   {
     label: "Registrar",
