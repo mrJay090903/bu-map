@@ -423,7 +423,7 @@ function App() {
       if (isOpenAITranscriptionConfigured()) {
         console.log("[Conversation Voice] Capturing audio from microphone...");
         const audioBlob = await captureAudioFromMicrophone({
-          maxDurationMs: 5000,
+          maxDurationMs: 8000,
           timesliceMs: 250,
           signal: controller.signal,
         });
@@ -432,6 +432,7 @@ function App() {
         try {
           transcript = await transcribeAudioWithOpenAI(audioBlob, {
             model: "gpt-4o-mini-transcribe",
+            language: "en",
           });
           console.log(
             "[Conversation Voice] OpenAI transcription received:",
@@ -457,7 +458,7 @@ function App() {
         // Fallback to FastAPI if OpenAI not configured
         console.log("[Conversation Voice] Capturing audio from microphone...");
         const audioBlob = await captureAudioFromMicrophone({
-          maxDurationMs: 4500,
+          maxDurationMs: 8000,
           timesliceMs: 250,
           signal: controller.signal,
         });

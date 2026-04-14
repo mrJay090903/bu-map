@@ -65,8 +65,8 @@ export const CAMPUS_BUILDINGS: BuildingInfo[] = [
   {
     code: "ECB",
     name: "Center for Computer & Engineering Studies",
-    fullName: "Center for Computer and Engineering Studies Building",
-    aliases: ["cces", "computer and engineering studies", "computer studies", "engineering", "ecb"],
+    fullName: "Center for Computer and Engineering Studies / Salceda Building 2",
+    aliases: ["cces", "computer and engineering studies", "computer studies", "engineering", "ecb", "salceda building 2", "salceda 2", "sb2"],
     rooms: [
       // First Floor
       { code: "LOBBY", name: "Lobby", floor: 1, aliases: ["entrance", "main lobby"] },
@@ -95,7 +95,7 @@ export const CAMPUS_BUILDINGS: BuildingInfo[] = [
       { code: "ECB-201", name: "ECB 201", floor: 2, aliases: ["ecb201", "ecb-201"] },
       { code: "ECB-202", name: "ECB 202", floor: 2, aliases: ["ecb202", "ecb-202"] },
       { code: "ECB-203", name: "ECB 203", floor: 2, aliases: ["ecb203", "ecb-203"] },
-      { code: "ECB-204", name: "ECB 204", floor: 2, aliases: ["ecb204", "ecb-204"] },
+      { code: "ECB-204", name: "ECB 204", floor: 2, aliases: ["ecb204", "ecb-204", "salceda building 2", "salceda 2", "sb2"] },
     ],
   },
   {

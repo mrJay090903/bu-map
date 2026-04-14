@@ -25,6 +25,8 @@ import thumbGym from "../assets/Thumbnails/GymThumb.jpg";
 import thumbNursing from "../assets/Thumbnails/NursingThumb.jpg";
 import thumbRegistrar from "../assets/Thumbnails/RegistrarThumb.jpg";
 import thumbSalceda from "../assets/Thumbnails/SalcedaBuildingThumb.jpg";
+import thumbAutomotive from "../assets/Thumbnails/AutomotiveThumb.jpg";
+import thumbEntrep from "../assets/Thumbnails/EntrepThumb.jpg";
 
 import type { Point, PresetDestination } from "../types/navigation";
 
@@ -69,14 +71,14 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
     keywords: ["gym", "sports", "fitness"],
   },
   {
-    label: "Center for Computer and Engineering Studies / Salceda Building",
+    label: "Center for Computer and Engineering Studies / Salceda Building 2",
     lat: 13.2958673,
     lon: 123.4848151,
     image: fpComEng2nd,
     thumbnail: thumbComEng,
     floorPlans: [
-      { label: "1st Floor", image: fpComEng2nd },
-      { label: "2nd Floor", image: fpComEng1st },
+      { label: "1st Floor", image: fpComEng1st },
+      { label: "2nd Floor", image: fpComEng2nd },
     ],
     floorDirectory: [
       {
@@ -129,10 +131,14 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       "it",
       "ccs",
       "cces",
+      "ecb",
       "center for computer and engineering studies",
       "center for computer engineering studies",
       "salceda",
       "salceda building",
+      "salceda building 2",
+      "salceda 2",
+      "sb2",
       "department",
       "computer lab",
       "comp lab",
@@ -143,6 +149,21 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       "cl5",
       "cl6",
       "laboratory",
+      "ecb 12",
+      "ecb 13",
+      "ecb 14",
+      "ecb 15",
+      "ecb 16",
+      "ecb 17",
+      "ecb 18",
+      "ecb 19",
+      "ecb 201",
+      "ecb 202",
+      "ecb 203",
+      "ecb 204",
+      "engineering lab",
+      "engineering laboratory",
+      "computer studies",
     ],
   },
   {
@@ -169,6 +190,19 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       "Useful destination for quick food and refreshment breaks",
     ],
     keywords: ["canteen", "food", "cafeteria", "eat"],
+  },
+  {
+    label: "Entrepreneurship Department",
+    lat: 13.29649,
+    lon: 123.48445,
+    image: destinationAdminImage,
+    thumbnail: thumbEntrep,
+    summary: "Academic department for entrepreneurship and food technology studies.",
+    details: [
+      "Located next to the BUP Canteen",
+      "Houses food processing laboratories and sensory evaluation rooms",
+    ],
+    keywords: ["entrepreneurship", "entrep", "food tech", "ftb", "business"],
   },
   {
     label: "Registrar",
@@ -434,7 +468,7 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
     keywords: ["services", "student", "css", "center for student services", "organizations"],
   },
   {
-    label: "Clinic",
+    label: "Medical and Dental Clinic Bicol Univerity Health Services",
     lat: 13.2959415,
     lon: 123.4854642,
     image: fpClinic,
@@ -457,5 +491,42 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       "Provides first aid and health checks for students",
     ],
     keywords: ["clinic", "health", "medical", "first aid", "nurse"],
+  },
+  {
+    label: "Research Development and Extension Office",
+    lat: 13.29550,
+    lon: 123.48455,
+    image: destinationAdminImage,
+    summary: "Office handling research grants, development programs, and extension services.",
+    details: [
+      "Located southwest of the Administration Building and near Automotive",
+      "Coordinates university research and community extension activities",
+    ],
+    keywords: ["research", "rdeo", "extension", "development", "research office"],
+  },
+  {
+    label: "Headquarters ROTC office",
+    lat: 13.29555,
+    lon: 123.48446,
+    image: destinationAdminImage,
+    summary: "Command post and administrative hub for the university's ROTC unit.",
+    details: [
+      "Situated next to the Research Development and Extension Office",
+      "Handles military training and student cadet administrative concerns",
+    ],
+    keywords: ["rotc", "headquarters", "military", "training", "hq"],
+  },
+  {
+    label: "Automotive Building",
+    lat: 13.29535,
+    lon: 123.48475,
+    image: destinationAdminImage,
+    thumbnail: thumbAutomotive,
+    summary: "Facility dedicated to automotive technology practice and instruction.",
+    details: [
+      "Houses automotive lab facilities and equipment",
+      "Located near the Registrar and Research offices",
+    ],
+    keywords: ["automotive", "atb", "auto shop", "vehicle", "mechanic"],
   },
 ];
