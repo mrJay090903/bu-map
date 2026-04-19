@@ -207,6 +207,7 @@ export function CampusMapView({
       center={mapCenter}
       zoom={19}
       scrollWheelZoom
+      attributionControl={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
