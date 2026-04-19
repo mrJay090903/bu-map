@@ -695,9 +695,11 @@ function App() {
       setRoute(null);
       setRouteError(null);
       setIsScannedRoute(true);
-      setShowScannedRouteWelcome(true);
+      setShowScannedRouteWelcome(false);
       setShowWelcomeModal(false);
-      setEntryMode(null);
+      setEntryMode("quick");
+      setShowDestinationDetails(false);
+      setIsPreviewCardCollapsed(false);
     } catch {
       setRouteError("Shared route packet is invalid or unsupported.");
     }
