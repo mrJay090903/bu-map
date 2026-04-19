@@ -113,27 +113,36 @@ function SimulationFollowController({
 
 function RouteAnimationController({
   animatedPolylineRef,
+  points,
 }: {
   animatedPolylineRef: React.RefObject<LeafletPolyline | null>;
+  points: [number, number][] | null;
 }) {
   const frameRef = useRef<number | null>(null);
+  const retryRef = useRef<number | null>(null);
 
   useEffect(() => {
     const polyline = animatedPolylineRef.current;
-    if (!polyline) {
+    if (!polyline || !points || points.length === 0) {
       return;
     }
 
-    const pathElement = (polyline as any)._path as SVGPathElement | undefined;
-    if (!pathElement) {
-      console.warn("[RouteAnimation] Path element not found");
-      return;
-    }
+    let pathElement: SVGPathElement | undefined;
+    let startTime = 0;
 
-    const start = performance.now();
+    const cleanPathStyles = () => {
+      if (pathElement) {
+        pathElement.style.removeProperty("stroke-dashoffset");
+        pathElement.style.removeProperty("stroke-opacity");
+      }
+    };
 
     const animate = (timestamp: number) => {
-      const elapsed = timestamp - start;
+      if (!pathElement) {
+        return;
+      }
+
+      const elapsed = timestamp - startTime;
       const dashOffset = -((elapsed / 22) % 64);
       const breathe = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(elapsed / 350));
 
@@ -143,18 +152,32 @@ function RouteAnimationController({
       frameRef.current = window.requestAnimationFrame(animate);
     };
 
-    frameRef.current = window.requestAnimationFrame(animate);
+    const startAnimation = () => {
+      const polylinePath = (polyline as any)._path as SVGPathElement | undefined;
+      if (!polylinePath) {
+        retryRef.current = window.setTimeout(startAnimation, 50);
+        return;
+      }
+
+      pathElement = polylinePath;
+      startTime = performance.now();
+      frameRef.current = window.requestAnimationFrame(animate);
+    };
+
+    startAnimation();
 
     return () => {
       if (frameRef.current !== null) {
         window.cancelAnimationFrame(frameRef.current);
         frameRef.current = null;
       }
-
-      pathElement.style.removeProperty("stroke-dashoffset");
-      pathElement.style.removeProperty("stroke-opacity");
+      if (retryRef.current !== null) {
+        window.clearTimeout(retryRef.current);
+        retryRef.current = null;
+      }
+      cleanPathStyles();
     };
-  }, [animatedPolylineRef]);
+  }, [animatedPolylineRef, points]);
 
   return null;
 }
@@ -198,7 +221,10 @@ export function CampusMapView({
         heading={effectiveHeading}
         rotateWithHeading={gyroEnabled}
       />
-      <RouteAnimationController animatedPolylineRef={animatedPolylineRef} />
+      <RouteAnimationController
+        animatedPolylineRef={animatedPolylineRef}
+        points={route?.points ?? null}
+      />
 
       <CircleMarker
         center={[startPoint.lat, startPoint.lon]}

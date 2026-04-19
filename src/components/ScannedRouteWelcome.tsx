@@ -1,9 +1,13 @@
 import { QrCode, Navigation, MapPin, X } from "lucide-react";
+import type { Destination, PresetDestination } from "../types/navigation";
 
 type ScannedRouteWelcomeProps = {
   show: boolean;
   startLabel: string;
   destinationLabel: string;
+  destination: Destination | null;
+  selectedPresetDestination: PresetDestination | null;
+  fallbackImage: string;
   onStart: () => void;
   onCancel: () => void;
 };
@@ -12,6 +16,9 @@ export function ScannedRouteWelcome({
   show,
   startLabel,
   destinationLabel,
+  destination,
+  selectedPresetDestination,
+  fallbackImage,
   onStart,
   onCancel,
 }: ScannedRouteWelcomeProps) {
@@ -19,9 +26,17 @@ export function ScannedRouteWelcome({
     return null;
   }
 
+  const previewImage =
+    selectedPresetDestination?.thumbnail ??
+    selectedPresetDestination?.image ??
+    fallbackImage;
+  const previewDescription =
+    selectedPresetDestination?.summary ??
+    "This shared route includes a destination preview so you can confirm your stop before starting navigation.";
+
   return (
-    <section className="pointer-events-none fixed inset-0 z-[1300] flex items-center justify-center bg-gradient-to-br from-blue-900/90 via-indigo-900/90 to-purple-900/90 backdrop-blur-md">
-      <div className="pointer-events-auto relative w-full max-w-lg mx-4">
+    <section className="pointer-events-none fixed inset-0 z-[1300] flex items-center justify-center bg-gradient-to-br from-blue-900/90 via-indigo-900/90 to-purple-900/90 backdrop-blur-md px-4 py-6 overflow-y-auto">
+      <div className="pointer-events-auto relative w-full max-w-3xl overflow-hidden rounded-3xl bg-white/95 shadow-2xl backdrop-blur-sm max-h-[calc(100vh-3rem)]">
         {/* Close button */}
         <button
           type="button"
@@ -55,7 +70,7 @@ export function ScannedRouteWelcome({
           </div>
 
           {/* Route details */}
-          <div className="px-8 py-8 space-y-6">
+          <div className="px-8 py-8 space-y-6 overflow-y-auto max-h-[calc(100vh-14rem)] sm:px-10 sm:py-10">
             <div className="space-y-4">
               {/* From location */}
               <div className="flex items-start gap-4">
@@ -100,8 +115,33 @@ export function ScannedRouteWelcome({
               </p>
             </div>
 
+            {destination ? (
+              <div className="grid gap-4 lg:grid-cols-[160px_1fr]">
+                <div className="h-36 overflow-hidden rounded-3xl border border-slate-200 bg-slate-100">
+                  <img
+                    src={previewImage}
+                    alt={`${destination.label} preview`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Destination preview
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-slate-900 truncate">
+                      {destination.label}
+                    </p>
+                  </div>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    {previewDescription}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {/* Action buttons */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
               <button
                 type="button"
                 onClick={onCancel}

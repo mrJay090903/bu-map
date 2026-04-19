@@ -83,10 +83,10 @@ export function AiConversationModal({
             <button
               type="button"
               onClick={onOpenQrCode}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-600 text-white shadow-lg shadow-cyan-500/30 ring-2 ring-cyan-400 transition hover:bg-cyan-700 hover:ring-cyan-300"
               title="Open QR Code"
             >
-              <QrCode className="h-5 w-5" />
+              <QrCode className="h-6 w-6" />
             </button>
           )}
           <button

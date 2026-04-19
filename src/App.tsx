@@ -1036,6 +1036,9 @@ function App() {
         show={showScannedRouteWelcome}
         startLabel={startLabel}
         destinationLabel={destination?.label || "Unknown"}
+        destination={destination}
+        selectedPresetDestination={selectedPresetDestination}
+        fallbackImage={welcomeRouteImage}
         onStart={onStartScannedRoute}
         onCancel={onCancelScannedRoute}
       />
@@ -1081,7 +1084,7 @@ function App() {
         />
       ) : null}
 
-      {!isQrRouteViewMode ? (
+      {(!isQrRouteViewMode || isScannedRoute) ? (
         <DestinationPreviewCard
           destination={destination}
           selectedPresetDestination={selectedPresetDestination}

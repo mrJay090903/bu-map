@@ -101,15 +101,20 @@ export function FloatingActionButtons({
         </button>
 
         {activeEntryMode === "quick" && hasQrCode && onOpenQrCode && (
-          <button
-            type="button"
-            onClick={onOpenQrCode}
-            className="flex items-center justify-center md:justify-start h-12 w-12 md:px-4 md:w-auto rounded-full border border-blue-300 bg-blue-600 font-semibold text-white shadow-lg transition hover:bg-blue-500"
-            aria-label="Show QR Code"
-          >
-            <QrCode size={20} className="md:mr-2 shrink-0 md:size-[22px]" />
-            <span className="hidden md:inline text-base">QR Code</span>
-          </button>
+          <div className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenQrCode}
+              className="flex items-center justify-center md:justify-start h-14 w-14 md:px-5 md:w-auto rounded-full border border-blue-300 bg-blue-600 font-semibold text-white shadow-xl transition hover:bg-blue-500"
+              aria-label="Show QR Code"
+            >
+              <QrCode size={24} className="md:mr-2 shrink-0 md:size-[24px]" />
+              <span className="hidden md:inline text-base">QR Code</span>
+            </button>
+            <div className="rounded-full bg-slate-100/95 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
+              scan to get the route
+            </div>
+          </div>
         )}
 
         <button
