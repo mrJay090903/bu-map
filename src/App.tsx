@@ -32,13 +32,18 @@ import {
   decodePacket,
   encodePacket,
 } from "./utils/routePacket";
-import { isBrowserSpeechRecognitionSupported } from "./utils/voiceRecognition";
+import {
+  captureAudioFromMicrophone,
+  isBrowserSpeechRecognitionSupported,
+  isFastAPIVoiceSupportedInBrowser,
+} from "./utils/voiceRecognition";
 import {
   isOpenAIConfigured,
   processVoiceCommandWithChatGPT,
   chatWithAI,
 } from "./services/chatgpt";
 import { transcribeRealtimeWithBrowserSpeech } from "./services/realtimeTranscription";
+import { transcribeAudioWithOpenAI } from "./services/openaiTranscription";
 import {
   getLanguageConfidenceScore,
   isValidLanguage,
@@ -83,6 +88,7 @@ function App() {
   const [gyroEnabled] = useState(false);
   const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(true);
+  const [showModeOnly, setShowModeOnly] = useState(false);
   const [hasSeenWelcomeIntro, setHasSeenWelcomeIntro] = useState<boolean>(
     () => {
       try {
@@ -130,10 +136,25 @@ function App() {
 
   const startPoint = currentStartPoint;
   const activeEntryMode = entryMode ?? "quick";
-  const voiceRecognitionSupported = useMemo(
+  const browserSpeechRecognitionSupported = useMemo(
     () => isBrowserSpeechRecognitionSupported(),
     [],
   );
+  const isChromiumBrowser = useMemo(() => {
+    if (typeof navigator === "undefined") {
+      return false;
+    }
+
+    return /\bChromium\b/i.test(navigator.userAgent);
+  }, []);
+  const cloudVoiceTranscriptionSupported = useMemo(
+    () => isFastAPIVoiceSupportedInBrowser() && isOpenAIConfigured(),
+    [],
+  );
+  const voiceRecognitionSupported =
+    isChromiumBrowser
+      ? cloudVoiceTranscriptionSupported
+      : browserSpeechRecognitionSupported || cloudVoiceTranscriptionSupported;
   const selectedPresetDestination = useMemo(
     () => resolvePresetFromDestination(destination, PRESET_DESTINATIONS),
     [destination],
@@ -507,19 +528,45 @@ function App() {
     voiceCaptureAbortRef.current = controller;
 
     try {
-      // Local STT path: browser speech recognition only (no cloud transcription)
-      setVoiceFeedback("Listening...");
-      console.log("[Conversation Voice] Using local browser STT...");
-
+      const useCloudStt =
+        isChromiumBrowser || !browserSpeechRecognitionSupported;
       let transcript = "";
-      for await (const update of transcribeRealtimeWithBrowserSpeech({
-        language: "en",
-        minConfidence: 0.5,
-        signal: controller.signal,
-      })) {
-        if (update.final) {
-          transcript = update.final;
-          console.log("[Conversation Voice] Local STT transcript:", transcript);
+      if (useCloudStt) {
+        if (!cloudVoiceTranscriptionSupported) {
+          throw new Error(
+            "Cloud STT is unavailable. Add VITE_OPENAI_API_KEY and ensure microphone recording is supported.",
+          );
+        }
+
+        setVoiceFeedback("Recording...");
+        console.log("[Conversation Voice] Using cloud transcription...");
+
+        const audioBlob = await captureAudioFromMicrophone({
+          maxDurationMs: 4500,
+          timesliceMs: 250,
+          signal: controller.signal,
+        });
+
+        setVoiceFeedback("Transcribing...");
+        transcript = await transcribeAudioWithOpenAI(audioBlob, {
+          model: "gpt-4o-mini-transcribe",
+          language: "en",
+          temperature: 0,
+        });
+        console.log("[Conversation Voice] OpenAI STT transcript:", transcript);
+      } else {
+        setVoiceFeedback("Listening...");
+        console.log("[Conversation Voice] Using browser speech recognition...");
+
+        for await (const update of transcribeRealtimeWithBrowserSpeech({
+          language: "en",
+          minConfidence: 0.5,
+          signal: controller.signal,
+        })) {
+          if (update.final) {
+            transcript = update.final;
+            console.log("[Conversation Voice] Browser STT transcript:", transcript);
+          }
         }
       }
 
@@ -1029,8 +1076,12 @@ function App() {
       {!isScannedRoute ? (
         <WelcomeModal
           show={showWelcomeModal}
-          onChooseEntryMode={onChooseEntryMode}
+          onChooseEntryMode={(mode) => {
+            onChooseEntryMode(mode);
+            setShowModeOnly(false);
+          }}
           welcomeImage={welcomeRouteImage}
+          modeOnly={showModeOnly}
         />
       ) : null}
 
@@ -1151,6 +1202,7 @@ function App() {
             stopVoiceRecognition();
             setShowAiConversation(false);
             setShowDestinationListModal(false);
+            setShowModeOnly(true);
             setShowWelcomeModal(true);
           }}
           onRecenter={(point) => setFocusRequest({ point, zoom: 18 })}
