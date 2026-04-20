@@ -44,6 +44,7 @@ export async function* transcribeRealtimeWithBrowserSpeech(
 
   let finalTranscript = "";
   let aborted = false;
+  let recognitionError: string | null = null;
 
   const onAbort = () => {
     aborted = true;
@@ -78,7 +79,8 @@ export async function* transcribeRealtimeWithBrowserSpeech(
     };
 
     recognition.onerror = (event: any) => {
-      console.error("[Realtime Speech] Error:", event.error);
+      recognitionError = String(event?.error ?? "unknown");
+      console.error("[Realtime Speech] Error:", recognitionError);
       enqueueResult({ interim: "", final: "", isValid: false, confidence: 0, isFinal: true });
     };
 
@@ -162,6 +164,10 @@ export async function* transcribeRealtimeWithBrowserSpeech(
       } else {
         break;
       }
+    }
+
+    if (recognitionError) {
+      throw new Error(`Speech recognition error: ${recognitionError}`);
     }
   } finally {
     signal?.removeEventListener("abort", onAbort);

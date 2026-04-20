@@ -145,7 +145,14 @@ function App() {
       return false;
     }
 
-    return /\bChromium\b/i.test(navigator.userAgent);
+    const userAgent = navigator.userAgent;
+    const isChromiumFamily = /(Chrome|Chromium|Edg)\/\d+/i.test(userAgent);
+    const isFirefox = /Firefox\/\d+/i.test(userAgent);
+    const isSafariOnly =
+      /Safari\/\d+/i.test(userAgent) &&
+      !/(Chrome|Chromium|Edg)\/\d+/i.test(userAgent);
+
+    return isChromiumFamily && !isFirefox && !isSafariOnly;
   }, []);
   const cloudVoiceTranscriptionSupported = useMemo(
     () => isFastAPIVoiceSupportedInBrowser() && isOpenAIConfigured(),
@@ -558,15 +565,53 @@ function App() {
         setVoiceFeedback("Listening...");
         console.log("[Conversation Voice] Using browser speech recognition...");
 
-        for await (const update of transcribeRealtimeWithBrowserSpeech({
-          language: "en",
-          minConfidence: 0.5,
-          signal: controller.signal,
-        })) {
-          if (update.final) {
-            transcript = update.final;
-            console.log("[Conversation Voice] Browser STT transcript:", transcript);
+        try {
+          for await (const update of transcribeRealtimeWithBrowserSpeech({
+            language: "en",
+            minConfidence: 0.5,
+            signal: controller.signal,
+          })) {
+            if (update.final) {
+              transcript = update.final;
+              console.log(
+                "[Conversation Voice] Browser STT transcript:",
+                transcript,
+              );
+            }
           }
+        } catch (browserSpeechError) {
+          const browserSpeechMessage =
+            browserSpeechError instanceof Error
+              ? browserSpeechError.message
+              : String(browserSpeechError);
+          const browserSpeechIsNetworkFailure =
+            /speech recognition error:\s*network/i.test(browserSpeechMessage);
+
+          if (!browserSpeechIsNetworkFailure || !cloudVoiceTranscriptionSupported) {
+            throw browserSpeechError;
+          }
+
+          console.warn(
+            "[Conversation Voice] Browser STT network error. Falling back to cloud transcription.",
+          );
+          setVoiceFeedback("Recording...");
+
+          const audioBlob = await captureAudioFromMicrophone({
+            maxDurationMs: 4500,
+            timesliceMs: 250,
+            signal: controller.signal,
+          });
+
+          setVoiceFeedback("Transcribing...");
+          transcript = await transcribeAudioWithOpenAI(audioBlob, {
+            model: "gpt-4o-mini-transcribe",
+            language: "en",
+            temperature: 0,
+          });
+          console.log(
+            "[Conversation Voice] OpenAI STT transcript (fallback):",
+            transcript,
+          );
         }
       }
 
