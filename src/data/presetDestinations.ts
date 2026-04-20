@@ -13,6 +13,9 @@ import fpNursing from "../assets/Floor Plan/Nursing.png";
 import fpRegistrar from "../assets/Floor Plan/Registrar.png";
 import fpSalceda1st from "../assets/Floor Plan/SalcedaBuilding_1stFloor.png";
 import fpSalceda2nd from "../assets/Floor Plan/SalcedaBuilding_2ndFloor.png";
+import fpAutomotive1st from "../assets/Floor Plan/Automotive_1stFloor.png";
+import fpElectrical1st from "../assets/Floor Plan/Electrical_1stFloor.png";
+import fpElectrical2nd from "../assets/Floor Plan/Electrical_2ndFloor.png";
 
 // Thumbnails
 import thumbAdmin from "../assets/Thumbnails/AdminBuildingThumb.jpg";
@@ -392,46 +395,29 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
     label: "Electronics Technology Department",
     lat: 13.29567,
     lon: 123.48419,
-    image: fpComEng1st,
+    image: fpElectrical1st,
     thumbnail: thumbElectronic,
     floorPlans: [
-      { label: "1st Floor", image: fpComEng1st },
-      { label: "2nd Floor", image: fpComEng2nd },
+      { label: "1st Floor", image: fpElectrical1st },
+      { label: "2nd Floor", image: fpElectrical2nd },
     ],
     floorDirectory: [
       {
         floorLabel: "1st Floor",
         items: [
-          { label: "ENGINEERING DEPT", marker: [25, 20] },
-          { label: "CR (Left)", marker: [10, 18] },
-          { label: "ECB 15", marker: [10, 36] },
-          { label: "ECB 16", marker: [10, 58] },
-          { label: "ECB 17", marker: [10, 80] },
-          { label: "ECB 19 (LAB 1)", marker: [28, 42] },
-          { label: "ECB 18 (LAB 2)", marker: [72, 42] },
-          { label: "ECB 14", marker: [73, 20] },
-          { label: "CR (Right)", marker: [90, 18] },
-          { label: "ECB 13", marker: [90, 36] },
-          { label: "ECB 12", marker: [90, 58] },
-          { label: "TECHNOLOGY DEPT", marker: [90, 80] },
+          { label: "Storage Room", marker: [15, 48] },
+          { label: "Tech Lab 1", marker: [40, 44] },
+          { label: "Tech Lab 2", marker: [64, 44] },
+          { label: "Restroom", marker: [84, 25] },
+          { label: "Storage Room 1", marker: [84, 60] },
         ],
       },
       {
         floorLabel: "2nd Floor",
         items: [
-          { label: "ELECTRICAL ROOM", marker: [10, 22] },
-          { label: "COMP LAB 5", marker: [10, 38] },
-          { label: "COMP LAB 6", marker: [10, 58] },
-          { label: "ECB 204", marker: [10, 82] },
-          { label: "COMP LAB 4", marker: [35, 20] },
-          { label: "CS DEPT", marker: [50, 15] },
-          { label: "COMP LAB 1", marker: [65, 20] },
-          { label: "CR (Right)", marker: [85, 18] },
-          { label: "COMP LAB 3", marker: [35, 45] },
-          { label: "COMP LAB 2", marker: [65, 45] },
-          { label: "ECB 203", marker: [90, 38] },
-          { label: "ECB 202", marker: [90, 58] },
-          { label: "ECB 201", marker: [90, 82] },
+          { label: "Lecture Room 1", marker: [22, 44] },
+          { label: "Lecture Room 2", marker: [49, 44] },
+          { label: "Lecture Room 3", marker: [78, 46] },
         ],
       },
     ],
@@ -525,8 +511,19 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
     label: "Automotive Building",
     lat: 13.29535,
     lon: 123.48475,
-    image: destinationAdminImage,
+    image: fpAutomotive1st,
     thumbnail: thumbAutomotive,
+    floorPlans: [
+      { label: "1st Floor", image: fpAutomotive1st },
+    ],
+    floorDirectory: [
+      {
+        floorLabel: "1st Floor",
+        items: [
+          { label: "AB-1", marker: [10, 22] },
+        ],
+      },
+    ],
     summary: "Facility dedicated to automotive technology practice and instruction.",
     details: [
       "Houses automotive lab facilities and equipment",
