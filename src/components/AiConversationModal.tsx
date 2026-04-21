@@ -45,11 +45,11 @@ export function AiConversationModal({
   }
 
   return (
-    <section className="pointer-events-auto absolute z-999 flex flex-col overflow-hidden bg-slate-50 shadow-2xl transition-all duration-300 md:right-4 md:top-4 md:bottom-4 md:w-[600px] md:h-[calc(100vh-2rem)] md:rounded-3xl md:border md:border-slate-200 max-md:inset-0 max-md:h-[100dvh] max-md:w-full max-md:rounded-none">
+    <section className="pointer-events-auto absolute z-999 flex flex-col overflow-hidden bg-slate-50 shadow-2xl transition-all duration-300 md:right-4 md:top-4 md:bottom-4 md:w-110 md:h-[calc(100vh-2rem)] md:rounded-3xl md:border md:border-slate-200 max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none">
       {/* Header */}
       <header className="shrink-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-sky-600 shadow-md">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-linear-to-br from-cyan-500 to-sky-600 shadow-md">
             <Bot className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -114,7 +114,7 @@ export function AiConversationModal({
                 <div
                   className={`relative max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
                     message.role === "user"
-                      ? "rounded-tr-sm bg-gradient-to-br from-cyan-500 to-sky-600 text-white"
+                      ? "rounded-tr-sm bg-linear-to-br from-cyan-500 to-sky-600 text-white"
                       : "rounded-tl-sm border border-slate-200 bg-white text-slate-800"
                   }`}
                 >
@@ -166,7 +166,7 @@ export function AiConversationModal({
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
               Suggestions
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion}
@@ -175,7 +175,7 @@ export function AiConversationModal({
                     void onSelectSuggestion(suggestion);
                   }}
                   disabled={isProcessing || isListening}
-                  className="rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                  className="min-w-max shrink-0 snap-start rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-cyan-700 transition hover:border-cyan-300 hover:bg-cyan-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
                 >
                   {suggestion}
                 </button>
