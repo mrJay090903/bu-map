@@ -402,8 +402,8 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
   },
   {
     label: "Electronics Technology Building",
-    lat: 13.2958673,
-    lon: 123.4848151,
+    lat: 13.29567,
+    lon: 123.48419,
     image: fpElectrical1st,
     thumbnail: thumbElectronic,
     floorPlans: [
