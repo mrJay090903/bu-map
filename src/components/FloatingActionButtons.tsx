@@ -111,9 +111,6 @@ export function FloatingActionButtons({
               <QrCode size={24} className="md:mr-2 shrink-0 md:size-[24px]" />
               <span className="hidden md:inline text-base">QR Code</span>
             </button>
-            <div className="rounded-full bg-slate-100/95 px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-              scan to get the route
-            </div>
           </div>
         )}
 

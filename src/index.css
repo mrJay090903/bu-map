@@ -18,6 +18,28 @@ body,
   font-size: 22px;
 }
 
+/* Kiosk touch behavior: drag to scroll, do not highlight text while swiping. */
+html,
+body,
+#root,
+#root * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 .leaflet-container {
   font-family: 'Manrope', sans-serif;
   background: #dbeafe;

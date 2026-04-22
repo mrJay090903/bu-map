@@ -45,7 +45,7 @@ export function AiConversationModal({
   }
 
   return (
-    <section className="pointer-events-auto absolute z-999 flex flex-col overflow-hidden bg-slate-50 shadow-2xl transition-all duration-300 md:right-4 md:top-4 md:bottom-4 md:w-110 md:h-[calc(100vh-2rem)] md:rounded-3xl md:border md:border-slate-200 max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none">
+    <section className="pointer-events-auto absolute z-999 flex select-none flex-col overflow-hidden bg-slate-50 shadow-2xl transition-all duration-300 md:right-4 md:top-4 md:bottom-4 md:w-110 md:h-[calc(100vh-2rem)] md:rounded-3xl md:border md:border-slate-200 max-md:inset-0 max-md:h-dvh max-md:w-full max-md:rounded-none">
       {/* Header */}
       <header className="shrink-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur-md">
         <div className="flex items-center gap-3">
@@ -90,7 +90,7 @@ export function AiConversationModal({
       </header>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-5">
+      <div className="flex-1 overflow-y-auto p-4 md:p-5" style={{ touchAction: "pan-y" }}>
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center px-2 text-center">
             <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100/70 shadow-inner">
@@ -166,7 +166,7 @@ export function AiConversationModal({
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
               Suggestions
             </p>
-            <div className="flex w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="flex w-full flex-nowrap gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ touchAction: "pan-x" }}>
               {suggestions.map((suggestion) => (
                 <button
                   key={suggestion}
