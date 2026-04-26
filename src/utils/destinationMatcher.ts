@@ -1,10 +1,199 @@
 import type { Destination, PresetDestination } from "../types/navigation";
 
+export type NlpIntent =
+  | "navigate"
+  | "ask-location"
+  | "ask-distance"
+  | "ask-direction"
+  | "show-floor-plan"
+  | "informational"
+  | "unknown";
+
+type MatchType = "alias" | "exact" | "token" | "fuzzy";
+
+type MatchResult = {
+  place: PresetDestination;
+  score: number;
+  matchType: MatchType;
+  details: string;
+};
+
+type IntentDetectionResult = {
+  intent: NlpIntent;
+  confidence: number;
+};
+
+export type NlpAnalysisResult = {
+  rawPrompt: string;
+  normalizedPrompt: string;
+  tokens: string[];
+  intent: NlpIntent;
+  confidence: number;
+  destination: PresetDestination | null;
+  destinationScore: number;
+  destinationMatchType: MatchType | null;
+  destinationMatchDetails: string | null;
+  extractedRoomLabel?: string;
+};
+
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "at",
+  "be",
+  "can",
+  "for",
+  "from",
+  "go",
+  "hello",
+  "hey",
+  "hi",
+  "i",
+  "in",
+  "is",
+  "it",
+  "me",
+  "my",
+  "of",
+  "on",
+  "please",
+  "show",
+  "take",
+  "the",
+  "to",
+  "want",
+  "where",
+]);
+
+const ROOM_ALIASES: Array<{ phrase: string; roomLabel: string }> = [
+  { phrase: "cashier", roomLabel: "CASHIER" },
+  { phrase: "registrar", roomLabel: "REGISTRAR OFFICE" },
+  { phrase: "library", roomLabel: "LIBRARY" },
+  { phrase: "librarian", roomLabel: "OFFICE OF THE LIBRARIAN" },
+  { phrase: "csac", roomLabel: "CSAC" },
+  { phrase: "ict lab", roomLabel: "ICT LABORATORY" },
+  { phrase: "clinic", roomLabel: "CLINIC" },
+  { phrase: "guidance", roomLabel: "GUIDANCE OFFICE" },
+];
+
+const INTENT_PHRASES: Record<NlpIntent, string[]> = {
+  navigate: [
+    "take me",
+    "bring me",
+    "go to",
+    "navigate",
+    "route me",
+    "start navigation",
+    "guide me",
+    "directions to",
+  ],
+  "ask-location": [
+    "where is",
+    "where s",
+    "located",
+    "location",
+    "find",
+    "which building",
+  ],
+  "ask-distance": [
+    "how far",
+    "distance",
+    "how long",
+    "eta",
+    "minutes left",
+    "time left",
+  ],
+  "ask-direction": [
+    "next direction",
+    "next step",
+    "which way",
+    "where do i go",
+    "turn",
+    "direction",
+  ],
+  "show-floor-plan": [
+    "floor plan",
+    "show map",
+    "room layout",
+    "layout",
+    "open plan",
+  ],
+  informational: ["what", "how", "when", "why", "who", "tell me", "explain"],
+  unknown: [],
+};
+
 function normalizeText(value: string) {
   return value
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
+}
+
+function containsAnyPhrase(input: string, phrases: string[]): boolean {
+  return phrases.some((phrase) => input.includes(phrase));
+}
+
+function extractPromptTokens(normalizedPrompt: string): string[] {
+  const words = normalizedPrompt.split(/\s+/).filter(Boolean);
+  const meaningfulWords = words.filter(
+    (word) => word.length > 1 && !STOP_WORDS.has(word),
+  );
+  return meaningfulWords.length > 0
+    ? meaningfulWords
+    : words.filter((word) => word.length > 1);
+}
+
+function detectIntent(
+  normalizedPrompt: string,
+  hasDestination: boolean,
+): IntentDetectionResult {
+  if (!normalizedPrompt) {
+    return { intent: "unknown", confidence: 0 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES["show-floor-plan"])) {
+    return { intent: "show-floor-plan", confidence: 0.9 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES["ask-distance"])) {
+    return { intent: "ask-distance", confidence: 0.86 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES["ask-direction"])) {
+    return { intent: "ask-direction", confidence: 0.84 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES.navigate)) {
+    return { intent: "navigate", confidence: 0.82 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES["ask-location"])) {
+    return { intent: "ask-location", confidence: 0.79 };
+  }
+
+  if (containsAnyPhrase(normalizedPrompt, INTENT_PHRASES.informational)) {
+    return { intent: "informational", confidence: 0.65 };
+  }
+
+  if (hasDestination) {
+    return { intent: "navigate", confidence: 0.68 };
+  }
+
+  return { intent: "unknown", confidence: 0.35 };
+}
+
+function extractRoomLabel(normalizedPrompt: string): string | undefined {
+  const codedRoomMatch = normalizedPrompt.match(/\b(?:sb|ab|ecb|cl)\s*-?\s*\d{1,3}\b/i);
+  if (codedRoomMatch?.[0]) {
+    return codedRoomMatch[0].replace(/\s+/g, " ").toUpperCase();
+  }
+
+  const roomAlias = ROOM_ALIASES.find((entry) =>
+    normalizedPrompt.includes(entry.phrase),
+  );
+  return roomAlias?.roomLabel;
 }
 
 /**
@@ -90,90 +279,140 @@ function resolveAliasDestination(
     return findDestinationByLabel(destinations, "CESD Building");
   }
 
+  const isLibraryPrompt =
+    normalizedPrompt.includes("library") ||
+    normalizedPrompt.includes("librarian") ||
+    normalizedPrompt.includes("csac") ||
+    normalizedPrompt.includes("identification card") ||
+    normalizedPrompt.includes("university id") ||
+    normalizedPrompt.includes("id reprint") ||
+    normalizedPrompt.includes("lost id") ||
+    normalizedPrompt.includes("defaced id") ||
+    normalizedPrompt.includes("mutilated id") ||
+    normalizedPrompt.includes("faded id");
+  if (isLibraryPrompt) {
+    return findDestinationByLabel(destinations, "Salceda Building");
+  }
+
+  const isCashierPrompt =
+    normalizedPrompt.includes("cashier") ||
+    normalizedPrompt.includes("payment") ||
+    normalizedPrompt.includes("fees");
+  if (isCashierPrompt) {
+    return findDestinationByLabel(destinations, "Administration Building");
+  }
+
+  const isClinicPrompt =
+    normalizedPrompt.includes("medical") ||
+    normalizedPrompt.includes("dental") ||
+    normalizedPrompt.includes("clinic") ||
+    normalizedPrompt.includes("health services");
+  if (isClinicPrompt) {
+    return findDestinationByLabel(
+      destinations,
+      "Medical and Dental Clinic Bicol Univerity Health Services",
+    );
+  }
+
+  const isGymPrompt =
+    normalizedPrompt.includes("gym") ||
+    normalizedPrompt.includes("sports") ||
+    normalizedPrompt.includes("fitness");
+  if (isGymPrompt) {
+    return findDestinationByLabel(destinations, "BUP GYM");
+  }
+
   return null;
 }
 
-export function resolvePresetFromPrompt(
-  prompt: string,
+function findBestDestinationMatch(
+  normalizedPrompt: string,
   destinations: PresetDestination[],
-): PresetDestination | null {
-  const normalizedPrompt = normalizeText(prompt);
-  console.log("[Voice Parsing] Received prompt:", prompt);
-  console.log("[Voice Parsing] Normalized prompt:", normalizedPrompt);
-
-  if (!normalizedPrompt) {
-    console.log("[Voice Parsing] Empty normalized prompt");
-    return null;
-  }
-
-  const aliasDestination = resolveAliasDestination(normalizedPrompt, destinations);
-  if (aliasDestination) {
-    console.log(
-      `[Voice Parsing] Alias redirect matched: "${normalizedPrompt}" -> "${aliasDestination.label}"`,
-    );
-    return aliasDestination;
-  }
-
-  const promptTokens = normalizedPrompt
-    .split(/\s+/)
-    .filter((token) => token.length > 1);
-
-  console.log("[Voice Parsing] Extracted tokens:", promptTokens);
+): { bestMatch: MatchResult | null; allScores: MatchResult[]; promptTokens: string[] } {
+  const promptTokens = extractPromptTokens(normalizedPrompt);
 
   if (promptTokens.length === 0) {
-    console.log("[Voice Parsing] No valid tokens found");
-    return null;
-  }
-
-  interface MatchResult {
-    place: PresetDestination;
-    score: number;
-    matchType: "exact" | "token" | "fuzzy";
-    details: string;
+    return { bestMatch: null, allScores: [], promptTokens };
   }
 
   let bestMatch: MatchResult | null = null;
   const allScores: MatchResult[] = [];
 
   for (const place of destinations) {
-    const searchableText = normalizeText(
-      `${place.label} ${place.keywords.join(" ")}`,
-    );
+    const normalizedLabel = normalizeText(place.label);
+    const labelTokens = extractPromptTokens(normalizedLabel);
+    const searchableText = normalizeText(`${place.label} ${place.keywords.join(" ")}`);
 
-    // Strategy 1: Exact substring match (highest priority)
-    if (searchableText.includes(normalizedPrompt)) {
-      const score = 100;
+    if (normalizedPrompt === normalizedLabel) {
       const result: MatchResult = {
         place,
-        score,
+        score: 100,
         matchType: "exact",
-        details: `Exact match: "${normalizedPrompt}" found in "${searchableText}"`,
+        details: `Exact label match: "${normalizedPrompt}"`,
       };
       allScores.push(result);
-      if (!bestMatch || score > bestMatch.score) {
+      bestMatch = result;
+      continue;
+    }
+
+    if (normalizedPrompt.includes(normalizedLabel)) {
+      const result: MatchResult = {
+        place,
+        score: 98,
+        matchType: "exact",
+        details: `Prompt contains destination label: "${place.label}"`,
+      };
+      allScores.push(result);
+      if (!bestMatch || result.score > bestMatch.score) {
         bestMatch = result;
       }
       continue;
     }
 
-    // Strategy 2: Token-based matching (medium priority)
-    let tokenScore = 0;
+    if (normalizedPrompt.length > 2 && searchableText.includes(normalizedPrompt)) {
+      const result: MatchResult = {
+        place,
+        score: 95,
+        matchType: "exact",
+        details: `Prompt phrase found in searchable text: "${normalizedPrompt}"`,
+      };
+      allScores.push(result);
+      if (!bestMatch || result.score > bestMatch.score) {
+        bestMatch = result;
+      }
+      continue;
+    }
+
     const matchedTokens: string[] = [];
+    let labelOverlap = 0;
+    let keywordOverlap = 0;
 
     for (const token of promptTokens) {
-      if (searchableText.includes(token)) {
-        tokenScore += 1;
+      if (labelTokens.includes(token)) {
         matchedTokens.push(token);
+        labelOverlap += 1;
+        continue;
+      }
+
+      if (searchableText.includes(token)) {
+        matchedTokens.push(token);
+        keywordOverlap += 1;
       }
     }
 
-    if (tokenScore > 0) {
-      const normalizedScore = (tokenScore / promptTokens.length) * 100;
+    const weightedOverlap = labelOverlap * 2 + keywordOverlap;
+    const maxWeightedOverlap = promptTokens.length * 2;
+
+    if (weightedOverlap > 0 && maxWeightedOverlap > 0) {
+      const normalizedScore = (weightedOverlap / maxWeightedOverlap) * 100;
       const result: MatchResult = {
         place,
         score: normalizedScore,
         matchType: "token",
-        details: `Token match (${tokenScore}/${promptTokens.length}): matched tokens=[${matchedTokens.join(", ")}]`,
+        details:
+          `Token match (${matchedTokens.length}/${promptTokens.length}): ` +
+          `labelTokens=${labelOverlap}, keywordTokens=${keywordOverlap}, ` +
+          `matched=[${matchedTokens.join(", ")}]`,
       };
       allScores.push(result);
       if (!bestMatch || normalizedScore > bestMatch.score) {
@@ -182,25 +421,19 @@ export function resolvePresetFromPrompt(
       continue;
     }
 
-    // Strategy 3: Fuzzy matching using Levenshtein distance (lowest priority)
     let bestFuzzyScore = 0;
     let bestFuzzyMatch = "";
 
-    // Try fuzzy matching against destination label
-    const labelSimilarity = calculateStringSimilarity(
-      normalizedPrompt,
-      place.label.toLowerCase(),
-    );
+    const labelSimilarity = calculateStringSimilarity(normalizedPrompt, normalizedLabel);
     if (labelSimilarity > bestFuzzyScore) {
       bestFuzzyScore = labelSimilarity;
       bestFuzzyMatch = place.label;
     }
 
-    // Try fuzzy matching against keywords
     for (const keyword of place.keywords) {
       const keySimilarity = calculateStringSimilarity(
         normalizedPrompt,
-        keyword.toLowerCase(),
+        normalizeText(keyword),
       );
       if (keySimilarity > bestFuzzyScore) {
         bestFuzzyScore = keySimilarity;
@@ -208,7 +441,6 @@ export function resolvePresetFromPrompt(
       }
     }
 
-    // Only consider fuzzy matches with reasonable confidence (>60%)
     if (bestFuzzyScore > 60) {
       const result: MatchResult = {
         place,
@@ -223,18 +455,101 @@ export function resolvePresetFromPrompt(
     }
   }
 
-  // Log all matches for debugging
+  return { bestMatch, allScores, promptTokens };
+}
+
+export function analyzePromptNlp(
+  prompt: string,
+  destinations: PresetDestination[],
+): NlpAnalysisResult {
+  const normalizedPrompt = normalizeText(prompt);
+  const extractedRoomLabel = extractRoomLabel(normalizedPrompt);
+
+  if (!normalizedPrompt) {
+    return {
+      rawPrompt: prompt,
+      normalizedPrompt,
+      tokens: [],
+      intent: "unknown",
+      confidence: 0,
+      destination: null,
+      destinationScore: 0,
+      destinationMatchType: null,
+      destinationMatchDetails: null,
+      extractedRoomLabel,
+    };
+  }
+
+  const aliasDestination = resolveAliasDestination(normalizedPrompt, destinations);
+
+  const { bestMatch: matchedDestination, allScores, promptTokens } =
+    findBestDestinationMatch(normalizedPrompt, destinations);
+
+  const bestMatch = aliasDestination
+    ? {
+        place: aliasDestination,
+        score: 99,
+        matchType: "alias" as const,
+        details: `Alias match for "${normalizedPrompt}"`,
+      }
+    : matchedDestination;
+
+  const intentResult = detectIntent(normalizedPrompt, Boolean(bestMatch));
+
+  let confidence = intentResult.confidence;
+  if (bestMatch) {
+    const destinationConfidence = Math.min(1, bestMatch.score / 100);
+    if (
+      intentResult.intent === "navigate" ||
+      intentResult.intent === "ask-location" ||
+      intentResult.intent === "show-floor-plan"
+    ) {
+      confidence = Math.max(confidence, 0.35 + destinationConfidence * 0.65);
+    } else {
+      confidence = Math.max(confidence, 0.25 + destinationConfidence * 0.5);
+    }
+  }
+
+  const clampedConfidence = Math.max(0, Math.min(1, confidence));
+
   console.log(
-    "[Voice Parsing] All matches:",
-    allScores.map((m) => ({
-      destination: m.place.label,
-      score: m.score.toFixed(1),
-      type: m.matchType,
-      details: m.details,
+    "[NLP] Destination candidates:",
+    allScores.map((candidate) => ({
+      destination: candidate.place.label,
+      score: candidate.score.toFixed(1),
+      type: candidate.matchType,
+      details: candidate.details,
     })),
   );
 
-  if (!bestMatch) {
+  return {
+    rawPrompt: prompt,
+    normalizedPrompt,
+    tokens: promptTokens,
+    intent: intentResult.intent,
+    confidence: clampedConfidence,
+    destination: bestMatch?.place ?? null,
+    destinationScore: bestMatch?.score ?? 0,
+    destinationMatchType: bestMatch?.matchType ?? null,
+    destinationMatchDetails: bestMatch?.details ?? null,
+    extractedRoomLabel,
+  };
+}
+
+export function resolvePresetFromPrompt(
+  prompt: string,
+  destinations: PresetDestination[],
+): PresetDestination | null {
+  const analysis = analyzePromptNlp(prompt, destinations);
+
+  console.log("[Voice Parsing] Received prompt:", prompt);
+  console.log("[Voice Parsing] Normalized prompt:", analysis.normalizedPrompt);
+  console.log("[Voice Parsing] Extracted tokens:", analysis.tokens);
+  console.log(
+    `[Voice Parsing] NLP intent=${analysis.intent}, confidence=${analysis.confidence.toFixed(2)}`,
+  );
+
+  if (!analysis.destination) {
     console.log(
       "[Voice Parsing] No matching destination found. Available destinations:",
       destinations.map((d) => d.label),
@@ -243,11 +558,13 @@ export function resolvePresetFromPrompt(
   }
 
   console.log(
-    `[Voice Parsing] Best match found: "${bestMatch.place.label}" (score: ${bestMatch.score.toFixed(1)}%, type: ${bestMatch.matchType})`,
+    `[Voice Parsing] Best match found: "${analysis.destination.label}" (score: ${analysis.destinationScore.toFixed(1)}%, type: ${analysis.destinationMatchType})`,
   );
-  console.log(`[Voice Parsing] Match details: ${bestMatch.details}`);
+  if (analysis.destinationMatchDetails) {
+    console.log(`[Voice Parsing] Match details: ${analysis.destinationMatchDetails}`);
+  }
 
-  return bestMatch.place;
+  return analysis.destination;
 }
 
 export function resolvePresetFromDestination(

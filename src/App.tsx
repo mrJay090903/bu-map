@@ -18,12 +18,12 @@ import { ScannedRouteWelcome } from "./components/ScannedRouteWelcome";
 import { GUARD_HOUSE, PRESET_DESTINATIONS } from "./data/presetDestinations";
 import { planBestRoutes } from "./services/routePlanner";
 import {
+  analyzePromptNlp,
   resolvePresetFromDestination,
-  resolvePresetFromPrompt,
 } from "./utils/destinationMatcher";
 import {
   formatDistance,
-  // formatDuration, // Unused after removing RouteAssistantPanel
+  formatDuration,
   compactLabel,
 } from "./utils/formatters";
 import { calculateBearing } from "./utils/geo";
@@ -280,6 +280,30 @@ function App() {
       return;
     }
 
+    const localNlp = analyzePromptNlp(command, PRESET_DESTINATIONS);
+    const localVoiceDestination = localNlp.destination;
+    const canResolveLocally =
+      localVoiceDestination &&
+      localNlp.confidence >= 0.68 &&
+      (localNlp.intent === "navigate" ||
+        localNlp.intent === "ask-location" ||
+        localNlp.intent === "unknown");
+
+    if (canResolveLocally && localVoiceDestination) {
+      console.log("[Voice Command] Local NLP resolved destination:", {
+        destination: localVoiceDestination.label,
+        intent: localNlp.intent,
+        confidence: localNlp.confidence.toFixed(2),
+      });
+      setVoiceFeedback(`Navigating to ${localVoiceDestination.label}...`);
+      setTimeout(() => {
+        applyDestination(localVoiceDestination);
+        setLocationError(null);
+        setVoiceFeedback(null);
+      }, 600);
+      return;
+    }
+
     // Use ChatGPT for AI-powered voice command processing if configured
     if (isOpenAIConfigured()) {
       console.log("[Voice Command] Processing with ChatGPT AI assistant...");
@@ -336,7 +360,10 @@ function App() {
     console.log(
       "[Voice Command] Attempting basic match against preset destinations",
     );
-    const matchedPreset = resolvePresetFromPrompt(command, PRESET_DESTINATIONS);
+    const matchedPreset =
+      localNlp.destination && localNlp.destinationScore >= 62
+        ? localNlp.destination
+        : null;
 
     if (matchedPreset) {
       console.log(
@@ -445,51 +472,13 @@ function App() {
       return null;
     }
 
-    const normalizedDestination = normalizeText(trimmedDestination);
-    const isCogDestination =
-      normalizedDestination === "cog" ||
-      normalizedDestination.includes("certificate of grade") ||
-      normalizedDestination.includes("certification of grades");
-    if (isCogDestination) {
-      return (
-        PRESET_DESTINATIONS.find(
-          (dest) => normalizeText(dest.label) === "registrar",
-        ) ?? null
-      );
-    }
-
-    const isElectronicsTechDestination =
-      normalizedDestination === "etd" ||
-      normalizedDestination.includes("electronics technology") ||
-      normalizedDestination.includes("electronics technology building") ||
-      normalizedDestination.includes("electronics technology department") ||
-      (normalizedDestination.includes("electronics") &&
-        normalizedDestination.includes("technology"));
-    if (isElectronicsTechDestination) {
-      return (
-        PRESET_DESTINATIONS.find(
-          (dest) => normalizeText(dest.label) === "cesd building",
-        ) ?? null
-      );
-    }
-
-    const exactMatch = PRESET_DESTINATIONS.find(
-      (dest) => normalizeText(dest.label) === normalizeText(trimmedDestination),
-    );
-    if (exactMatch) {
-      return exactMatch;
-    }
-
-    const fallbackMatch = resolvePresetFromPrompt(
-      trimmedDestination,
-      PRESET_DESTINATIONS,
-    );
-    if (fallbackMatch) {
+    const nlpResult = analyzePromptNlp(trimmedDestination, PRESET_DESTINATIONS);
+    if (nlpResult.destination) {
       console.warn("[AI Conversation] Resolved AI destination with fallback:", {
         requested: trimmedDestination,
-        matched: fallbackMatch.label,
+        matched: nlpResult.destination.label,
       });
-      return fallbackMatch;
+      return nlpResult.destination;
     }
 
     return null;
@@ -513,6 +502,132 @@ function App() {
 
     setConversationMessages((prev) => [...prev, userMessage]);
     setIsAiProcessing(true);
+
+    const nlpResult = analyzePromptNlp(trimmedMessage, PRESET_DESTINATIONS);
+    const matchedLocalDestination = nlpResult.destination;
+    const localRoomLabelHint = matchedLocalDestination
+      ? nlpResult.extractedRoomLabel ??
+        inferRoomLabelFromMessage(trimmedMessage, matchedLocalDestination)
+      : undefined;
+
+    const buildFloorPlanAction = (
+      target: PresetDestination | null,
+      roomLabel?: string,
+    ): ConversationMessageAction | undefined => {
+      if (!target || (target.floorPlans?.length ?? 0) === 0) {
+        return undefined;
+      }
+
+      return {
+        type: "view-floor-plan",
+        destination: target.label,
+        label: `View ${compactLabel(target.label)} Floor Plan`,
+        roomLabel,
+      };
+    };
+
+    if (nlpResult.intent === "ask-distance") {
+      const content =
+        route && destination
+          ? `You are heading to ${destination.label}. Remaining distance is ${formatDistance(route.distance)} and estimated travel time is ${formatDuration(route.duration)}.`
+          : "No active route yet. Tell me where you want to go, and I will start navigation.";
+
+      const assistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content,
+        timestamp: Date.now(),
+      };
+
+      setConversationMessages((prev) => [...prev, assistantMessage]);
+      setIsAiProcessing(false);
+      return;
+    }
+
+    if (nlpResult.intent === "ask-direction") {
+      const step = currentStep ?? route?.steps[0] ?? null;
+      const content = step
+        ? `Next direction: ${step.instruction}. Continue for about ${formatDistance(step.distance)}.`
+        : "No active direction yet. Ask me to navigate to a destination first.";
+
+      const assistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content,
+        timestamp: Date.now(),
+      };
+
+      setConversationMessages((prev) => [...prev, assistantMessage]);
+      setIsAiProcessing(false);
+      return;
+    }
+
+    if (nlpResult.intent === "show-floor-plan") {
+      const floorPlanTarget = matchedLocalDestination ?? selectedPresetDestination;
+      const content = floorPlanTarget
+        ? (floorPlanTarget.floorPlans?.length ?? 0) > 0
+          ? `I found the floor plan for ${floorPlanTarget.label}. Tap the button below to open it.`
+          : `I found ${floorPlanTarget.label}, but there is no floor plan available yet.`
+        : "Please specify which building you want a floor plan for.";
+
+      const assistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content,
+        timestamp: Date.now(),
+        action: buildFloorPlanAction(floorPlanTarget, localRoomLabelHint),
+      };
+
+      setConversationMessages((prev) => [...prev, assistantMessage]);
+      setIsAiProcessing(false);
+      return;
+    }
+
+    const canHandleLocalNavigation =
+      matchedLocalDestination &&
+      nlpResult.confidence >= 0.68 &&
+      (nlpResult.intent === "navigate" ||
+        nlpResult.intent === "ask-location" ||
+        nlpResult.intent === "unknown");
+
+    if (canHandleLocalNavigation) {
+      const localNavigateMessage =
+        nlpResult.intent === "ask-location"
+          ? `${matchedLocalDestination.label} is available on campus. I am starting navigation now.`
+          : `Navigating to ${matchedLocalDestination.label}.`;
+
+      const assistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: localNavigateMessage,
+        timestamp: Date.now(),
+        action: buildFloorPlanAction(matchedLocalDestination, localRoomLabelHint),
+      };
+
+      setConversationMessages((prev) => [...prev, assistantMessage]);
+      applyDestination(matchedLocalDestination);
+      setIsAiProcessing(false);
+      return;
+    }
+
+    if (!isOpenAIConfigured()) {
+      const fallbackMessage = matchedLocalDestination
+        ? `I think you may be referring to ${matchedLocalDestination.label}. Try saying "Take me to ${matchedLocalDestination.label}".`
+        : "OpenAI is not configured, so I can only run local navigation intents. Try saying a destination like " +
+          '"Take me to Registrar".';
+
+      const assistantMessage: ConversationMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: fallbackMessage,
+        timestamp: Date.now(),
+        action: buildFloorPlanAction(matchedLocalDestination, localRoomLabelHint),
+      };
+
+      setConversationMessages((prev) => [...prev, assistantMessage]);
+      setIsAiProcessing(false);
+      return;
+    }
 
     try {
       const response = await chatWithAI(trimmedMessage, conversationMessages, {
