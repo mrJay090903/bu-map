@@ -26,7 +26,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-crp",
     name: "Opening of Cost Recovery Program (CRP)",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Allows students to enroll in subjects offered under a special program (usually with fees if regular slots are unavailable)",
@@ -37,7 +37,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-drop",
     name: "Dropping of Subjects",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Students may officially remove enrolled subjects within the allowed period",
@@ -48,7 +48,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-add-change",
     name: "Adding or Changing of Subjects",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Students can revise their enrolled subjects (add new ones or replace existing ones)",
@@ -59,7 +59,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-loa",
     name: "Application for Leave of Absence (LOA)",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Students formally request temporary leave from their studies for valid reasons",
@@ -68,7 +68,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-otr",
     name: "Official Transcript of Records (OTR)",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Provides the official academic record of a student for employment, transfer, or further studies",
@@ -79,7 +79,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-auth-credentials",
     name: "Authentication of Academic Credentials",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Verification and certification of documents such as TOR, diploma, or certificates for legal or official use",
@@ -90,7 +90,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-honorable-dismissal",
     name: "Request for Honorable Dismissal",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Issued when a student transfers to another school; certifies no pending obligations",
@@ -100,7 +100,7 @@ export const CAMPUS_SERVICES_DATABASE: ServiceInfo[] = [
     id: "registrar-certifications",
     name: "Request for Certifications",
     category: "academic",
-    building: "Administration Building",
+    building: "Registrar Office",
     office: "Registrar's Office",
     floor: 1,
     description: "Obtain official certificates for various academic purposes",
@@ -492,13 +492,14 @@ BUILDINGS
 - Nursing Department
 - Electronics Technology Building (located in CESD Building, First and Second Floor)
 - Administration Building (First and Second Floor)
+- Registrar Office
 - Gymnasium / BUP Gym
 - Center for Student Services
 - Automotive Building
 
 TRANSACTIONS AND OFFICES
 
-Registrar's Office (Academic Transactions)
+Registrar's Office (Academic Transactions) - Registrar Office, Floor 1
 1. Opening of Cost Recovery Program (CRP)
 2. Dropping of Subjects
 3. Adding or Changing of Subjects

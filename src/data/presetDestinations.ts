@@ -285,13 +285,13 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
       },
     ],
     summary:
-      "Main administration area for registrar and essential student services.",
+      "Main administration area for essential campus offices and student services.",
     details: [
-      "Common stop for enrollment and records processing",
-      "Includes several student-facing service windows",
+      "Includes administrative and finance-related offices",
+      "Includes the campus cashier and other service windows",
       "Helpful destination for official campus transactions",
     ],
-    keywords: ["admin", "administration", "office", "registrar"],
+    keywords: ["admin", "administration", "office"],
   },
   {
     label: "Nursing Department",

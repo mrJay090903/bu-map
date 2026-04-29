@@ -370,7 +370,7 @@ export function getRoomsByBuilding(buildingCode: string): RoomInfo[] {
 export const CAMPUS_SERVICES = {
   registrar: {
     office: "Registrar's Office",
-    building: "Administration Building",
+    building: "Registrar Office",
     floor: 1,
     contact: "Academic Records & Enrollment Services",
     services: [
@@ -519,7 +519,7 @@ export function getCampusServicesText(): string {
 
   output += "KEY SERVICES FOR STUDENTS:\n\n";
 
-  output += "REGISTRAR'S OFFICE (Administration Building, Floor 1)\n";
+  output += "REGISTRAR'S OFFICE (Registrar Office, Floor 1)\n";
   output += "- Academic Records & Enrollment Services\n";
   output += "- Services: Transcript of Records, Certifications, Subject Changes, Leave of Absence\n";
   output += "- Subject-related fees: ₱10.00 per subject for adding/dropping/changing\n";
