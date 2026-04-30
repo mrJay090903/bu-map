@@ -187,7 +187,7 @@ CRITICAL NAVIGATION RULES:
 - When user asks for "Electronics Technology", "Electronics Technology Building", "Electronics Technology Department", or "ETD" → navigate to "CESD Building"
 - When user asks for "gym", "sports", "fitness" → navigate to "BUP GYM"
 - When user asks for "nursing" related rooms → navigate to "Nursing Department"
-- When user asks for "registrar", "enrollment", "transcript", "academic records", "COG", or "Certificate of Grade" → navigate to "Registrar"
+- When user asks for "registrar", "enrollment", "transcript", "academic records", "COG", or "Certificate of Grade" → navigate to "Registrar" (Registrar Office building, floor 1)
 - When user asks for "cashier", "payment", "fees" → navigate to "Administration Building"
 - When user asks for "health", "medical", "dental", "clinic" → navigate to "Medical and Dental Clinic Bicol Univerity Health Services"
 - If request contains both "ID" and "payment/fee", prioritize ID issuance/reprint at CSAC and navigate to "Salceda Building" unless user explicitly asks for cashier payment window.
