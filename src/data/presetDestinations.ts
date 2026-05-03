@@ -18,6 +18,7 @@ import fpResearchDevelopment1st from "../assets/Floor Plan/Research_Development_
 import fpRotc1st from "../assets/Floor Plan/ROTC_1stFloor.png";
 import fpDormstel1st from "../assets/Floor Plan/Dormstel_FlorrPlan.png";
 import fpCss1st from "../assets/Floor Plan/CSS_FloorPlan.png";
+import fpEntrep from "../assets/Floor Plan/Entrep floorplan.png";
 
 // Thumbnails
 import thumbAdmin from "../assets/Thumbnails/AdminBuildingThumb.jpg";
@@ -210,8 +211,21 @@ export const PRESET_DESTINATIONS: PresetDestination[] = [
     label: "Entrepreneurship Department",
     lat: 13.29649,
     lon: 123.48445,
-    image: thumbEntrep,
+    image: fpEntrep,
     thumbnail: thumbEntrep,
+    floorPlans: [
+      { label: "1st Floor", image: fpEntrep },
+    ],
+    floorDirectory: [
+      {
+        floorLabel: "1st Floor",
+        items: [
+          { label: "ENTREPRENEURSHIP DEPARTMENT (FTB-1)", marker: [30, 55] },
+          { label: "FOOD PROCESSING LABORATORY 1", marker: [52, 50] },
+          { label: "FOOD PROCESSING LABORATORY 2", marker: [74, 50] },
+        ],
+      },
+    ],
     summary: "Academic department for entrepreneurship and food technology studies.",
     details: [
       "Located next to the BUP Canteen",

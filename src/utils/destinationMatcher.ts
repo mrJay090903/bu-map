@@ -296,8 +296,12 @@ function resolveAliasDestination(
 
   const isCashierPrompt =
     normalizedPrompt.includes("cashier") ||
+    normalizedPrompt.includes("pay") ||
     normalizedPrompt.includes("payment") ||
-    normalizedPrompt.includes("fees");
+    normalizedPrompt.includes("fees") ||
+    normalizedPrompt.includes("cor reprint") ||
+    normalizedPrompt.includes("cor reprinting") ||
+    normalizedPrompt.includes("certificate of registration reprint");
   if (isCashierPrompt) {
     return findDestinationByLabel(destinations, "Administration Building");
   }
@@ -328,7 +332,9 @@ function resolveAliasDestination(
 function findBestDestinationMatch(
   normalizedPrompt: string,
   destinations: PresetDestination[],
+  options?: { matchKeywords?: boolean },
 ): { bestMatch: MatchResult | null; allScores: MatchResult[]; promptTokens: string[] } {
+  const matchKeywords = options?.matchKeywords ?? true;
   const promptTokens = extractPromptTokens(normalizedPrompt);
 
   if (promptTokens.length === 0) {
@@ -341,7 +347,9 @@ function findBestDestinationMatch(
   for (const place of destinations) {
     const normalizedLabel = normalizeText(place.label);
     const labelTokens = extractPromptTokens(normalizedLabel);
-    const searchableText = normalizeText(`${place.label} ${place.keywords.join(" ")}`);
+    const searchableText = matchKeywords
+      ? normalizeText(`${place.label} ${place.keywords.join(" ")}`)
+      : normalizedLabel;
 
     if (normalizedPrompt === normalizedLabel) {
       const result: MatchResult = {
@@ -394,7 +402,7 @@ function findBestDestinationMatch(
         continue;
       }
 
-      if (searchableText.includes(token)) {
+      if (matchKeywords && searchableText.includes(token)) {
         matchedTokens.push(token);
         keywordOverlap += 1;
       }
@@ -430,14 +438,16 @@ function findBestDestinationMatch(
       bestFuzzyMatch = place.label;
     }
 
-    for (const keyword of place.keywords) {
-      const keySimilarity = calculateStringSimilarity(
-        normalizedPrompt,
-        normalizeText(keyword),
-      );
-      if (keySimilarity > bestFuzzyScore) {
-        bestFuzzyScore = keySimilarity;
-        bestFuzzyMatch = keyword;
+    if (matchKeywords) {
+      for (const keyword of place.keywords) {
+        const keySimilarity = calculateStringSimilarity(
+          normalizedPrompt,
+          normalizeText(keyword),
+        );
+        if (keySimilarity > bestFuzzyScore) {
+          bestFuzzyScore = keySimilarity;
+          bestFuzzyMatch = keyword;
+        }
       }
     }
 
@@ -461,9 +471,16 @@ function findBestDestinationMatch(
 export function analyzePromptNlp(
   prompt: string,
   destinations: PresetDestination[],
+  options?: { matchScope?: "building" | "full" },
 ): NlpAnalysisResult {
+  const matchScope = options?.matchScope ?? "building";
+  const allowAlias = matchScope === "full";
+  const allowRoomLabels = matchScope === "full";
+  const matchKeywords = matchScope === "full";
   const normalizedPrompt = normalizeText(prompt);
-  const extractedRoomLabel = extractRoomLabel(normalizedPrompt);
+  const extractedRoomLabel = allowRoomLabels
+    ? extractRoomLabel(normalizedPrompt)
+    : undefined;
 
   if (!normalizedPrompt) {
     return {
@@ -480,10 +497,12 @@ export function analyzePromptNlp(
     };
   }
 
-  const aliasDestination = resolveAliasDestination(normalizedPrompt, destinations);
+  const aliasDestination = allowAlias
+    ? resolveAliasDestination(normalizedPrompt, destinations)
+    : null;
 
   const { bestMatch: matchedDestination, allScores, promptTokens } =
-    findBestDestinationMatch(normalizedPrompt, destinations);
+    findBestDestinationMatch(normalizedPrompt, destinations, { matchKeywords });
 
   const bestMatch = aliasDestination
     ? {
