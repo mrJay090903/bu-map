@@ -67,49 +67,22 @@ const WELCOME_SEEN_KEY = "bu-map-welcome-seen-v1";
 const PUBLIC_BASE_URL = (import.meta.env.VITE_PUBLIC_BASE_URL ?? "").trim();
 
 type PuterTtsOptions = {
-  lang?: string;
+  language?: string;
+  voice?: string;
+  engine?: string;
+  provider?: string;
+  model?: string;
 };
 
-type PuterTtsCallable = (
-  text: string,
-  options?: PuterTtsOptions,
-) => Promise<void> | void;
-
-type PuterTtsApi = {
-  speak?: PuterTtsCallable;
-  stop?: () => void;
+type PuterAiApi = {
+  txt2speech?: (
+    text: string,
+    options?: PuterTtsOptions,
+  ) => Promise<HTMLAudioElement | { src?: string } | unknown>;
 };
 
 type PuterGlobal = {
-  ai?: {
-    tts?: PuterTtsApi | PuterTtsCallable;
-    textToSpeech?: PuterTtsApi | PuterTtsCallable;
-  };
-  tts?: PuterTtsApi | PuterTtsCallable;
-};
-
-const resolvePuterTts = (puter?: PuterGlobal) => {
-  const candidates = [
-    puter?.ai?.tts,
-    puter?.ai?.textToSpeech,
-    puter?.tts,
-  ];
-
-  for (const candidate of candidates) {
-    if (!candidate) {
-      continue;
-    }
-
-    if (typeof candidate === "function") {
-      return { speak: candidate } as PuterTtsApi;
-    }
-
-    if (typeof candidate.speak === "function") {
-      return candidate;
-    }
-  }
-
-  return null;
+  ai?: PuterAiApi;
 };
 
 function App() {
@@ -161,31 +134,66 @@ function App() {
   } | null>(null);
   const lastSpokenMessageIdRef = useRef<string | null>(null);
   const wasAiConversationOpenRef = useRef(false);
+  const activeTtsAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const speakAssistantMessage = async (text: string) => {
     if (typeof window === "undefined") {
       return;
     }
-
-    const puter = (window as { puter?: PuterGlobal }).puter;
-    const tts = resolvePuterTts(puter);
-    if (!tts || typeof tts.speak !== "function") {
-      console.warn("[TTS] Puter TTS not available.");
-      return;
-    }
-
     const trimmedText = text.trim();
     if (!trimmedText) {
       return;
     }
 
     try {
-      if (typeof tts.stop === "function") {
-        tts.stop();
+      activeTtsAudioRef.current?.pause();
+      activeTtsAudioRef.current = null;
+
+      const puter = (window as { puter?: PuterGlobal }).puter;
+      const txt2speech = puter?.ai?.txt2speech;
+
+      if (typeof txt2speech === "function") {
+        const result = await txt2speech(trimmedText, { language: "en-US" });
+
+        let audio: HTMLAudioElement | null = null;
+        if (result instanceof HTMLAudioElement) {
+          audio = result;
+        } else if (
+          result &&
+          typeof result === "object" &&
+          "src" in result &&
+          typeof (result as any).src === "string"
+        ) {
+          audio = new Audio((result as any).src);
+        }
+
+        if (audio) {
+          activeTtsAudioRef.current = audio;
+          await audio.play();
+          return;
+        }
+
+        console.warn("[TTS] Puter txt2speech returned unexpected result:", result);
+        return;
       }
-      await tts.speak(trimmedText, { lang: "en-US" });
+
+      console.warn("[TTS] Puter AI txt2speech not available.");
     } catch (error) {
-      console.warn("[TTS] Failed to speak:", error);
+      console.warn("[TTS] Puter TTS failed, falling back:", error);
+    }
+
+    try {
+      if (
+        "speechSynthesis" in window &&
+        typeof SpeechSynthesisUtterance !== "undefined"
+      ) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(trimmedText);
+        utterance.lang = "en-US";
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (error) {
+      console.warn("[TTS] Browser speech synthesis failed:", error);
     }
   };
 
