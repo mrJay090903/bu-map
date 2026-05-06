@@ -66,6 +66,52 @@ const WELCOME_SEEN_KEY = "bu-map-welcome-seen-v1";
 
 const PUBLIC_BASE_URL = (import.meta.env.VITE_PUBLIC_BASE_URL ?? "").trim();
 
+type PuterTtsOptions = {
+  lang?: string;
+};
+
+type PuterTtsCallable = (
+  text: string,
+  options?: PuterTtsOptions,
+) => Promise<void> | void;
+
+type PuterTtsApi = {
+  speak?: PuterTtsCallable;
+  stop?: () => void;
+};
+
+type PuterGlobal = {
+  ai?: {
+    tts?: PuterTtsApi | PuterTtsCallable;
+    textToSpeech?: PuterTtsApi | PuterTtsCallable;
+  };
+  tts?: PuterTtsApi | PuterTtsCallable;
+};
+
+const resolvePuterTts = (puter?: PuterGlobal) => {
+  const candidates = [
+    puter?.ai?.tts,
+    puter?.ai?.textToSpeech,
+    puter?.tts,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    if (typeof candidate === "function") {
+      return { speak: candidate } as PuterTtsApi;
+    }
+
+    if (typeof candidate.speak === "function") {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
 function App() {
   const [destination, setDestination] = useState<Destination | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -113,6 +159,35 @@ function App() {
     text: string;
     at: number;
   } | null>(null);
+  const lastSpokenMessageIdRef = useRef<string | null>(null);
+  const wasAiConversationOpenRef = useRef(false);
+
+  const speakAssistantMessage = async (text: string) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const puter = (window as { puter?: PuterGlobal }).puter;
+    const tts = resolvePuterTts(puter);
+    if (!tts || typeof tts.speak !== "function") {
+      console.warn("[TTS] Puter TTS not available.");
+      return;
+    }
+
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      return;
+    }
+
+    try {
+      if (typeof tts.stop === "function") {
+        tts.stop();
+      }
+      await tts.speak(trimmedText, { lang: "en-US" });
+    } catch (error) {
+      console.warn("[TTS] Failed to speak:", error);
+    }
+  };
 
   // AI Conversation state
   const [showAiConversation, setShowAiConversation] = useState(false);
@@ -166,6 +241,41 @@ function App() {
     () => resolvePresetFromDestination(destination, PRESET_DESTINATIONS),
     [destination],
   );
+
+  useEffect(() => {
+    if (showAiConversation && !wasAiConversationOpenRef.current) {
+      const lastAssistantMessage = [...conversationMessages]
+        .reverse()
+        .find((message) => message.role === "assistant");
+
+      if (lastAssistantMessage) {
+        lastSpokenMessageIdRef.current = lastAssistantMessage.id;
+      }
+    }
+
+    wasAiConversationOpenRef.current = showAiConversation;
+  }, [conversationMessages, showAiConversation]);
+
+  useEffect(() => {
+    if (!showAiConversation) {
+      return;
+    }
+
+    const lastAssistantMessage = [...conversationMessages]
+      .reverse()
+      .find((message) => message.role === "assistant");
+
+    if (!lastAssistantMessage) {
+      return;
+    }
+
+    if (lastAssistantMessage.id === lastSpokenMessageIdRef.current) {
+      return;
+    }
+
+    lastSpokenMessageIdRef.current = lastAssistantMessage.id;
+    void speakAssistantMessage(lastAssistantMessage.content);
+  }, [conversationMessages, showAiConversation]);
 
   const simulationPoint = useMemo<Point | null>(() => {
     if (!route || simulationIndex === null) {
