@@ -306,6 +306,8 @@ function App() {
     void speakAssistantMessage(lastAssistantMessage.content);
   }, [conversationMessages, showAiConversation]);
 
+  const isQrRouteViewMode = isScannedRoute && !showScannedRouteWelcome;
+
   const simulationPoint = useMemo<Point | null>(() => {
     if (!route || simulationIndex === null) {
       return null;
@@ -329,16 +331,45 @@ function App() {
     };
   }, [route, simulationIndex]);
 
-  const isSimulationRunning = simulationIndex !== null && !isSimulationPaused;
+  const gpsProgressIndex = useMemo<number | null>(() => {
+    if (!route || !isQrRouteViewMode || route.points.length === 0) {
+      return null;
+    }
+
+    let bestIndex = 0;
+    let bestDistance = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < route.points.length; index += 1) {
+      const point = route.points[index];
+      if (!point) {
+        continue;
+      }
+
+      const candidate: Point = { lat: point[0], lon: point[1] };
+      const distance = distanceMeters(startPoint, candidate);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestIndex = index;
+      }
+    }
+
+    return bestIndex;
+  }, [isQrRouteViewMode, route, startPoint]);
+
+  const navigationIndex = isQrRouteViewMode ? gpsProgressIndex : simulationIndex;
+
+  const followPoint = isQrRouteViewMode ? startPoint : simulationPoint;
+  const isFollowing = isQrRouteViewMode
+    ? true
+    : simulationIndex !== null && !isSimulationPaused;
+
   const headingDegrees = useMemo(() => {
-    if (!route || simulationIndex === null) {
+    if (!route || navigationIndex === null) {
       return 0;
     }
 
     const maxIndex = route.points.length - 1;
-    const baseIndex = Math.floor(
-      Math.max(0, Math.min(simulationIndex, maxIndex)),
-    );
+    const baseIndex = Math.floor(Math.max(0, Math.min(navigationIndex, maxIndex)));
     const current = route.points[baseIndex];
     const next = route.points[Math.min(baseIndex + 1, maxIndex)];
     if (!current || !next) {
@@ -349,16 +380,16 @@ function App() {
       { lat: current[0], lon: current[1] },
       { lat: next[0], lon: next[1] },
     );
-  }, [route, simulationIndex]);
+  }, [route, navigationIndex]);
 
   const effectiveHeading =
     gyroEnabled && deviceHeading !== null ? deviceHeading : headingDegrees;
 
   const currentStepIndex =
-    route && simulationIndex !== null && route.steps.length > 0
+    route && navigationIndex !== null && route.steps.length > 0
       ? Math.min(
           Math.floor(
-            (simulationIndex / Math.max(route.points.length - 1, 1)) *
+            (navigationIndex / Math.max(route.points.length - 1, 1)) *
               route.steps.length,
           ),
           route.steps.length - 1,
@@ -368,8 +399,7 @@ function App() {
   const currentStep =
     currentStepIndex >= 0 && route ? route.steps[currentStepIndex] : null;
 
-  const showTopDirectionBanner = isSimulationRunning && currentStep !== null;
-  const isQrRouteViewMode = isScannedRoute && !showScannedRouteWelcome;
+  const showTopDirectionBanner = isFollowing && currentStep !== null;
 
   const buildingPinIcon = useMemo(
     () =>
@@ -1300,7 +1330,7 @@ function App() {
   }, [route, destination, startPoint, startLabel]);
 
   useEffect(() => {
-    if (!route || simulationIndex === null || isSimulationPaused) {
+    if (!route || simulationIndex === null || isSimulationPaused || isQrRouteViewMode) {
       return;
     }
 
@@ -1328,7 +1358,7 @@ function App() {
     return () => {
       window.clearTimeout(timer);
     };
-  }, [route, simulationIndex, isSimulationPaused, simulationSpeed]);
+  }, [route, simulationIndex, isSimulationPaused, simulationSpeed, isQrRouteViewMode]);
 
   // Auto-reset to welcome page after 2 minutes of inactivity (kiosk-safe behavior)
   useEffect(() => {
@@ -1457,7 +1487,7 @@ function App() {
     setEntryMode("quick");
     setShowDestinationDetails(false);
     setIsPreviewCardCollapsed(true);
-    setSimulationIndex(0);
+    setSimulationIndex(null);
     setIsSimulationPaused(false);
     // Let RouteBoundsController handle the map fitting
   };
@@ -1573,8 +1603,8 @@ function App() {
         mapCenter={MAP_CENTER}
         focusRequest={focusRequest}
         route={route}
-        simulationPoint={simulationPoint}
-        isSimulationRunning={isSimulationRunning}
+        simulationPoint={followPoint}
+        isSimulationRunning={isFollowing}
         effectiveHeading={effectiveHeading}
         gyroEnabled={gyroEnabled}
         startPoint={startPoint}
