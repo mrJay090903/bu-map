@@ -33,6 +33,8 @@ type CampusMapViewProps = {
   destinations: PresetDestination[];
   destination: Destination | null;
   buildingPinIcon: DivIcon;
+  routeBoundsMode?: "always" | "once" | "off";
+  routeBoundsResetKey?: string;
   onSelectPresetDestination: (place: PresetDestination) => void;
   compactLabel: (label: string) => string;
 };
@@ -52,15 +54,41 @@ function MapFocusController({ request }: { request: FocusRequest | null }) {
   return null;
 }
 
-function RouteBoundsController({ points }: { points: [number, number][] }) {
+function RouteBoundsController({
+  points,
+  mode,
+  resetKey,
+}: {
+  points: [number, number][];
+  mode: "always" | "once" | "off";
+  resetKey: string;
+}) {
   const map = useMap();
+  const fittedRef = useRef(false);
+  const lastResetKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (resetKey !== lastResetKeyRef.current) {
+      fittedRef.current = false;
+      lastResetKeyRef.current = resetKey;
+    }
+  }, [resetKey]);
+
+  useEffect(() => {
+    if (mode === "off") {
+      return;
+    }
     if (points.length < 2) {
       return;
     }
+
+    if (mode === "once" && fittedRef.current) {
+      return;
+    }
+
     map.fitBounds(points, { padding: [48, 48] });
-  }, [map, points]);
+    fittedRef.current = true;
+  }, [map, mode, points]);
 
   return null;
 }
@@ -196,6 +224,8 @@ export function CampusMapView({
   destinations,
   destination,
   buildingPinIcon,
+  routeBoundsMode = "always",
+  routeBoundsResetKey = "",
   onSelectPresetDestination,
   compactLabel,
 }: CampusMapViewProps) {
@@ -215,7 +245,13 @@ export function CampusMapView({
       />
 
       <MapFocusController request={focusRequest} />
-      {route?.points ? <RouteBoundsController points={route.points} /> : null}
+      {route?.points ? (
+        <RouteBoundsController
+          points={route.points}
+          mode={routeBoundsMode}
+          resetKey={routeBoundsResetKey}
+        />
+      ) : null}
       <SimulationFollowController
         point={simulationPoint}
         enabled={isSimulationRunning}

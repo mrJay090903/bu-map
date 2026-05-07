@@ -85,6 +85,21 @@ type PuterGlobal = {
   ai?: PuterAiApi;
 };
 
+function distanceMeters(a: Point, b: Point) {
+  const R = 6371000;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+  const dLat = lat2 - lat1;
+  const dLon = ((b.lon - a.lon) * Math.PI) / 180;
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const x =
+    sinDLat * sinDLat +
+    Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+  const c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return R * c;
+}
+
 function App() {
   const [destination, setDestination] = useState<Destination | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -135,6 +150,12 @@ function App() {
   const lastSpokenMessageIdRef = useRef<string | null>(null);
   const wasAiConversationOpenRef = useRef(false);
   const activeTtsAudioRef = useRef<HTMLAudioElement | null>(null);
+  const scannedRouteStartFallbackRef = useRef<{
+    point: Point;
+    label: string;
+  } | null>(null);
+  const geoWatchIdRef = useRef<number | null>(null);
+  const lastGeoUpdateRef = useRef<{ at: number; point: Point } | null>(null);
 
   const speakAssistantMessage = async (text: string) => {
     if (typeof window === "undefined") {
@@ -1068,6 +1089,11 @@ function App() {
         label: packet.dl,
       };
 
+      scannedRouteStartFallbackRef.current = {
+        point: startFromPacket,
+        label: packet.sl || "Shared Start",
+      };
+
       setCurrentStartPoint(startFromPacket);
       setStartLabel(packet.sl || "Shared Start");
       setDestination(destinationFromPacket);
@@ -1083,6 +1109,80 @@ function App() {
       setRouteError("Shared route packet is invalid or unsupported.");
     }
   }, []);
+
+  useEffect(() => {
+    if (!isScannedRoute) {
+      if (geoWatchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchIdRef.current);
+        geoWatchIdRef.current = null;
+      }
+      lastGeoUpdateRef.current = null;
+      return;
+    }
+
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      return;
+    }
+
+    const MIN_UPDATE_MS = 2500;
+    const MIN_MOVE_METERS = 8;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const nextPoint: Point = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+        };
+
+        const last = lastGeoUpdateRef.current;
+        const now = Date.now();
+        if (last) {
+          const moved = distanceMeters(last.point, nextPoint);
+          const elapsed = now - last.at;
+          if (elapsed < MIN_UPDATE_MS && moved < MIN_MOVE_METERS) {
+            return;
+          }
+        }
+
+        lastGeoUpdateRef.current = { at: now, point: nextPoint };
+        setCurrentStartPoint(nextPoint);
+        setStartLabel("Your location");
+      },
+      (error) => {
+        console.warn("[GPS] watchPosition error:", error);
+
+        const fallback = scannedRouteStartFallbackRef.current;
+        if (fallback) {
+          setCurrentStartPoint(fallback.point);
+          setStartLabel(fallback.label);
+        }
+
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError(
+            "Location permission denied. Enable GPS access to navigate in real time.",
+          );
+        } else {
+          setLocationError(
+            "Unable to read your location. Check GPS and try again.",
+          );
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 2000,
+        timeout: 10000,
+      },
+    );
+
+    geoWatchIdRef.current = watchId;
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      if (geoWatchIdRef.current === watchId) {
+        geoWatchIdRef.current = null;
+      }
+    };
+  }, [isScannedRoute]);
 
   useEffect(() => {
     return () => {
@@ -1147,7 +1247,7 @@ function App() {
   }, [destination, startPoint.lat, startPoint.lon]);
 
   useEffect(() => {
-    if (!route || !destination) {
+    if (!route || !destination || isScannedRoute) {
       setQrCodeDataUrl(null);
       setShareLink(null);
       return;
@@ -1483,6 +1583,8 @@ function App() {
         destinations={PRESET_DESTINATIONS}
         destination={destination}
         buildingPinIcon={buildingPinIcon}
+        routeBoundsMode={isScannedRoute ? "once" : "always"}
+        routeBoundsResetKey={destination?.label ?? ""}
         onSelectPresetDestination={onSelectPresetDestination}
         compactLabel={compactLabel}
       />
